@@ -1,0 +1,117 @@
+// BrickCheck relay: signs BrickLink API requests and stores synced inventories.
+// Secrets: APP_KEY, RB_KEY (Rebrickable), and optionally BL_CONSUMER_KEY, BL_CONSUMER_SECRET, BL_TOKEN, BL_TOKEN_SECRET
+// Optional variable: ALLOWED_ORIGIN (for example https://yourname.github.io)
+// KV binding: SYNC
+
+export default {
+  async fetch(req, env) {
+    const cors = {
+      "Access-Control-Allow-Origin": env.ALLOWED_ORIGIN || "*",
+      "Access-Control-Allow-Headers": "Content-Type, X-App-Key",
+      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+      "Access-Control-Max-Age": "86400",
+    };
+    const json = (obj, status = 200) =>
+      new Response(JSON.stringify(obj), { status, headers: { ...cors, "Content-Type": "application/json" } });
+
+    if (req.method === "OPTIONS") return new Response(null, { headers: cors });
+    if (!env.APP_KEY || req.headers.get("X-App-Key") !== env.APP_KEY) return json({ error: "Wrong app key" }, 401);
+
+    const url = new URL(req.url);
+
+    // BrickLink catalog and price guide (read-only)
+    if (url.pathname.startsWith("/bl/")) {
+      if (req.method !== "GET") return json({ error: "GET only" }, 405);
+      if (!env.BL_CONSUMER_KEY || !env.BL_TOKEN) return json({ error: "The relay has no BrickLink keys yet." }, 500);
+      const path = url.pathname.slice(4);
+      if (!/^(items|colors)(\/|$)/.test(path)) return json({ error: "Path not allowed" }, 403);
+      const target = "https://api.bricklink.com/api/store/v1/" + path + url.search;
+      const r = await fetch(target, { headers: { Authorization: await oauthHeader("GET", target, env) } });
+      return new Response(await r.text(), { status: r.status, headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
+    // Rebrickable catalog (read-only)
+    if (url.pathname.startsWith("/rb/")) {
+      if (req.method !== "GET") return json({ error: "GET only" }, 405);
+      if (!env.RB_KEY) return json({ error: "The relay has no Rebrickable key (RB_KEY)." }, 500);
+      const path = url.pathname.slice(4);
+      if (!/^(sets|minifigs|colors|parts)(\/|$)/.test(path)) return json({ error: "Path not allowed" }, 403);
+      const target = "https://rebrickable.com/api/v3/lego/" + path + url.search;
+      const r = await fetch(target, { headers: { Authorization: "key " + env.RB_KEY, Accept: "application/json" } });
+      return new Response(await r.text(), { status: r.status, headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
+    // Sync
+    if (url.pathname === "/sync" && req.method === "POST") {
+      if (!env.SYNC) return json({ error: "The relay has no KV namespace bound as SYNC." }, 500);
+      const doc = (await env.SYNC.get("doc", { type: "json" })) || {};
+      doc.inv = doc.inv || {}; doc.deleted = doc.deleted || {}; doc.srv = doc.srv || {};
+      const inc = await req.json();
+      const now = Date.now();
+      let changed = false;
+      for (const [id, t] of Object.entries(inc.deleted || {})) {
+        if (!doc.deleted[id] || t > doc.deleted[id]) { doc.deleted[id] = t; changed = true; }
+      }
+      for (const [id, rec] of Object.entries(inc.inv || {})) {
+        if (doc.deleted[id] && doc.deleted[id] >= (rec.updated || 0)) continue;
+        const cur = doc.inv[id];
+        const m = cur ? mergeRec(cur, rec) : rec;
+        if (!cur || JSON.stringify(m) !== JSON.stringify(cur)) { doc.inv[id] = m; doc.srv[id] = now; changed = true; }
+      }
+      for (const id of Object.keys(doc.deleted)) {
+        if (doc.inv[id] && doc.deleted[id] >= (doc.inv[id].updated || 0)) { delete doc.inv[id]; delete doc.srv[id]; changed = true; }
+      }
+      if (changed) await env.SYNC.put("doc", JSON.stringify(doc));
+      const since = Number(inc.since) || 0, out = {};
+      for (const [id, t] of Object.entries(doc.srv)) if (t > since && doc.inv[id]) out[id] = doc.inv[id];
+      return json({ now, inv: out, deleted: doc.deleted });
+    }
+
+    return json({
+      ok: true, app: "brickcheck-relay", sync: !!env.SYNC, rebrickable: !!env.RB_KEY,
+      bricklink: !!(env.BL_CONSUMER_KEY && env.BL_CONSUMER_SECRET && env.BL_TOKEN && env.BL_TOKEN_SECRET),
+    });
+  },
+};
+
+// Same merge rules as the app: newest change to each part wins.
+function mergeItem(a, b) {
+  const s = (a.t || 0) >= (b.t || 0) ? a : b, p = (a.pT || 0) >= (b.pT || 0) ? a : b;
+  return { ...s, pN: p.pN, pU: p.pU, pT: p.pT };
+}
+function mergeRec(x, y) {
+  const [nw, od] = (y.updated || 0) > (x.updated || 0) ? [y, x] : [x, y];
+  const m = { ...od, ...nw };
+  const omap = new Map((od.items || []).map(i => [i.id, i])), seen = new Set(), items = [];
+  for (const it of nw.items || []) { const o = omap.get(it.id); items.push(o ? mergeItem(it, o) : it); seen.add(it.id); }
+  for (const it of od.items || []) if (!seen.has(it.id)) items.push(it);
+  m.items = items;
+  const sets = [...(nw.sets || [])]; for (const s of od.sets || []) if (!sets.some(z => z.num === s.num)) sets.push(s);
+  m.sets = sets;
+  const nt = (x.notesT || 0) >= (y.notesT || 0) ? x : y; m.notes = nt.notes; m.notesT = nt.notesT || 0;
+  m.updated = Math.max(x.updated || 0, y.updated || 0);
+  return m;
+}
+
+// OAuth 1.0a, HMAC-SHA1, static tokens (BrickLink's "simpler flow")
+const enc = s => encodeURIComponent(s).replace(/[!'()*]/g, c => "%" + c.charCodeAt(0).toString(16).toUpperCase());
+async function oauthHeader(method, target, env) {
+  const u = new URL(target);
+  const oauth = {
+    oauth_consumer_key: env.BL_CONSUMER_KEY,
+    oauth_token: env.BL_TOKEN,
+    oauth_signature_method: "HMAC-SHA1",
+    oauth_timestamp: Math.floor(Date.now() / 1000).toString(),
+    oauth_nonce: crypto.randomUUID().replace(/-/g, ""),
+    oauth_version: "1.0",
+  };
+  const params = [...u.searchParams.entries(), ...Object.entries(oauth)]
+    .map(([k, v]) => [enc(k), enc(v)])
+    .sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : a[1] < b[1] ? -1 : a[1] > b[1] ? 1 : 0));
+  const base = [method, enc(u.origin + u.pathname), enc(params.map(([k, v]) => k + "=" + v).join("&"))].join("&");
+  const keyStr = enc(env.BL_CONSUMER_SECRET) + "&" + enc(env.BL_TOKEN_SECRET);
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(keyStr), { name: "HMAC", hash: "SHA-1" }, false, ["sign"]);
+  const sig = new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(base)));
+  oauth.oauth_signature = btoa(String.fromCharCode(...sig));
+  return "OAuth " + Object.entries(oauth).map(([k, v]) => `${k}="${enc(v)}"`).join(", ");
+}

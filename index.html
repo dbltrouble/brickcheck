@@ -1,0 +1,773 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="BrickCheck">
+<meta name="color-scheme" content="light dark">
+<title>BrickCheck</title>
+<style>
+:root{
+  --bg:#eef0f3; --surface:#ffffff; --ink:#15181e; --muted:#5d6572; --line:#d6dae1;
+  --accent:#0b5fd6; --accent-ink:#ffffff; --ok:#1d8a4a; --ok-bg:#e3f4ea; --bad:#cf2f2a; --bad-bg:#fbe7e6;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#101318; --surface:#1a1e26; --ink:#eef0f4; --muted:#9aa3b2; --line:#2e3440;
+    --accent:#5b9bff; --accent-ink:#06142b; --ok:#4cc27e; --ok-bg:#15301f; --bad:#ff6b66; --bad-bg:#3a1a19;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#101318; --surface:#1a1e26; --ink:#eef0f4; --muted:#9aa3b2; --line:#2e3440;
+  --accent:#5b9bff; --accent-ink:#06142b; --ok:#4cc27e; --ok-bg:#15301f; --bad:#ff6b66; --bad-bg:#3a1a19;
+  color-scheme:dark;
+}
+:root[data-theme="light"]{color-scheme:light}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-text-size-adjust:100%}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--bg);z-index:30}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+a{color:var(--accent)}
+.wrap{max-width:1200px;margin:0 auto;padding:12px 14px 90px}
+h1{font-size:26px;margin:6px 0 2px;letter-spacing:-.02em}
+h2{font-size:18px;margin:22px 0 8px}
+.sub{color:var(--muted);margin:0 0 14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.row.nowrap{flex-wrap:nowrap}
+.grow{flex:1 1 auto;min-width:0}
+input[type=text],input[type=password],input[type=search],input[type=url],textarea,select{width:100%;min-height:46px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+textarea{min-height:70px;resize:vertical}
+.btn{min-height:46px;padding:0 16px;border-radius:10px;border:1px solid var(--line);background:var(--surface);font-weight:600}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.danger{color:var(--bad)}
+.btn.small{min-height:38px;padding:0 12px;font-weight:500}
+.btn:disabled{opacity:.5}
+.err{color:var(--bad);margin:8px 0 0}
+.okmsg{color:var(--ok);margin:8px 0 0}
+.chip-s{min-height:32px;padding:0 10px;border-radius:99px;border:1px solid var(--line);background:var(--surface);font-size:13px;color:var(--muted);white-space:nowrap;flex:none}
+.chip-s.ok{color:var(--ok)} .chip-s.error{color:var(--bad)}
+.setrow{display:flex;gap:12px;align-items:center;padding:10px;border-radius:12px;background:var(--surface);border:1px solid var(--line);margin-bottom:8px;width:100%;text-align:left}
+.setrow img{width:64px;height:64px;object-fit:contain;background:#fff;border-radius:8px;flex:none}
+.setrow .t{font-weight:650}
+.bar{height:6px;border-radius:3px;background:var(--line);overflow:hidden;margin-top:6px}
+.bar>i{display:block;height:100%;background:var(--ok)}
+.pill{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;font-weight:600;background:var(--line);color:var(--muted);white-space:nowrap}
+.pill.done{background:var(--ok-bg);color:var(--ok)}
+.pill.miss{background:var(--bad-bg);color:var(--bad)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);margin:0 -14px;padding:8px 14px;border-bottom:1px solid var(--line)}
+.ttl{font-size:18px;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pstat{color:var(--muted);font-size:13px;margin-top:4px}
+.controls{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface)}
+.seg button{border:0;background:none;min-height:38px;padding:0 12px}
+.seg button.on{background:var(--accent);color:var(--accent-ink);font-weight:600}
+select.mini{width:auto;min-height:38px;padding:4px 8px}
+.chips{display:flex;gap:6px;overflow-x:auto;padding:2px 0 6px;-webkit-overflow-scrolling:touch}
+.chip{flex:none;display:inline-flex;align-items:center;gap:6px;min-height:38px;padding:0 12px;border-radius:99px;border:1px solid var(--line);background:var(--surface);white-space:nowrap;font-size:14px}
+.chip i{width:14px;height:14px;border-radius:50%;border:1px solid var(--line);flex:none}
+.chip span{color:var(--muted);font-size:12px;font-weight:700}
+.chip.on{border:2px solid var(--accent);font-weight:600}
+.chip.clear span{color:var(--ok)}
+/* items */
+#list.list{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+#list.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:10px;margin-top:12px}
+.item{display:grid;grid-template-columns:76px minmax(0,1fr) 118px;gap:10px;align-items:center;padding:8px;background:var(--surface);border:2px solid var(--line);border-radius:12px}
+.item.st-ok{border-color:var(--ok);background:var(--ok-bg)}
+.item.st-bad{border-color:var(--bad);background:var(--bad-bg)}
+.pic{position:relative;width:76px;height:76px;background:#fff;border-radius:8px;overflow:hidden}
+.pic img{display:block;width:100%;height:100%;object-fit:contain}
+.qty{position:absolute;left:3px;top:3px;background:#15181e;color:#fff;font-weight:700;border-radius:7px;padding:0 7px;font-size:15px}
+.meta{display:flex;flex-direction:column;gap:1px;min-width:0}
+.meta b{font-size:16px}
+.nm{font-size:13px;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.col{font-size:13px;display:flex;align-items:center;gap:6px}
+.col i{width:12px;height:12px;border-radius:50%;border:1px solid var(--line);flex:none}
+.fig,.px{font-size:12px;color:var(--muted)}
+.missnote{font-weight:700;color:var(--bad);font-size:13px}
+.acts{display:flex;flex-direction:column;gap:6px}
+.cmp{min-height:54px;border-radius:10px;border:2px solid var(--ok);background:var(--surface);color:var(--ok);font-weight:700;font-size:16px}
+.cmp.on{background:#1d8a4a;border-color:#1d8a4a;color:#fff}
+.mrow{display:flex;gap:6px}
+.mis{flex:1;min-height:38px;border-radius:9px;border:1px solid var(--bad);background:var(--surface);color:var(--bad);font-weight:600;font-size:14px}
+.mis.on{background:#cf2f2a;border-color:#cf2f2a;color:#fff}
+.dec{width:40px;min-height:38px;border-radius:9px;border:1px solid var(--line);background:var(--surface);font-size:20px;font-weight:700;flex:none}
+#list.grid .item{grid-template-columns:1fr;align-items:stretch}
+#list.grid .pic{width:100%;height:auto;aspect-ratio:1}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#15181e;color:#fff;padding:10px 16px;border-radius:10px;z-index:60;max-width:90%}
+/* report */
+table.rep{width:100%;border-collapse:collapse;background:var(--surface)}
+table.rep th,table.rep td{border-bottom:1px solid var(--line);padding:8px;text-align:left;vertical-align:middle}
+table.rep img{width:60px;height:60px;object-fit:contain;background:#fff;display:block}
+.tablewrap{overflow-x:auto}
+.big{font-size:20px;font-weight:700}
+.num{text-align:right!important;white-space:nowrap}
+@media print{
+  :root{--bg:#fff;--surface:#fff;--ink:#000;--muted:#333;--line:#bbb}
+  body::before,.noprint{display:none!important}
+  body{background:#fff;color:#000}
+  .wrap{padding:0;max-width:none}
+  table.rep tr{break-inside:avoid}
+}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+
+<script>
+"use strict";
+const KEY = "brickcheck:v2", PKEY = "brickcheck:prefs2", MKEY = "brickcheck:sync2", CKEY = "brickcheck:colors", PCKEY = "brickcheck:prices";
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const _d = document.createElement("textarea");
+const decode = s => { _d.innerHTML = String(s ?? ""); return _d.value; };
+const read = (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } };
+const write = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } };
+const nc = (a, b) => String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: "base" });
+
+let store = read(KEY, { inv: {}, deleted: {} }); store.inv = store.inv || {}; store.deleted = store.deleted || {};
+let prefs = Object.assign({ relay: "", appKey: "", source: "rb", theme: "auto", view: "auto", status: "all", src: "all", sort: ["color", "name"] }, read(PKEY, {}));
+let syncMeta = Object.assign({ since: 0, lastPush: 0 }, read(MKEY, {}));
+let colors = read(CKEY, null);
+let priceCache = read(PCKEY, {});
+function applyTheme() {
+  const r = document.documentElement;
+  if (prefs.theme === "light" || prefs.theme === "dark") r.dataset.theme = prefs.theme; else delete r.dataset.theme;
+}
+applyTheme();
+const SORTS = [["color", "Color"], ["name", "Name"], ["num", "Part #"], ["qty", "Quantity"], ["vu", "Used value"], ["vn", "New value"]];
+prefs.sort = (Array.isArray(prefs.sort) ? prefs.sort : []).filter(k => SORTS.some(s => s[0] === k));
+if (!prefs.sort.length) prefs.sort = ["color", "name"];
+
+const ui = { screen: "home", rec: null, busy: false, error: "", lotErr: "", q: "", color: "all", setf: "all", prices: null, sync: "off", syncMsg: "", setMsg: "" };
+
+let saveWarned = false;
+function persist() { if (!write(KEY, store) && !saveWarned) { saveWarned = true; toast("Could not save on this device. Storage is full or blocked."); } }
+const savePrefs = () => write(PKEY, prefs);
+try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (e) {}
+
+function toast(msg) {
+  const t = document.createElement("div"); t.className = "toast noprint"; t.textContent = msg;
+  document.body.appendChild(t); setTimeout(() => t.remove(), 2800);
+}
+const fmtDate = t => t ? new Date(t).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "";
+const viewMode = () => prefs.view === "auto" ? (window.innerWidth >= 700 ? "grid" : "list") : prefs.view;
+const money = v => v == null ? "n/a" : v > 0 && v < 0.01 ? "<$0.01" : "$" + v.toFixed(2);
+const normSet = s => { s = s.trim(); return /-\d+$/.test(s) ? s : s + "-1"; };
+const recTitle = r => r.sets.map(s => s.num + ((s.copies || 1) > 1 ? " ×" + s.copies : "") + " " + s.name).join(" + ");
+
+/* ---------- relay + BrickLink ---------- */
+const relayOn = () => !!(prefs.relay && prefs.appKey);
+async function relay(path, opts = {}) {
+  let r;
+  try { r = await fetch(prefs.relay.trim().replace(/\/+$/, "") + path, { ...opts, headers: { "X-App-Key": prefs.appKey, "Content-Type": "application/json" } }); }
+  catch (e) { throw new Error("Could not reach the relay. Check the relay URL and your connection."); }
+  if (r.status === 401) throw new Error("The relay rejected the app key. Check it in Settings.");
+  try { return await r.json(); } catch (e) { throw new Error("The relay returned an unexpected response (" + r.status + ")."); }
+}
+async function bl(path) {
+  const d = await relay("/bl/" + path);
+  if (d.error) throw new Error(d.error);
+  const m = d.meta || {};
+  if (m.code !== 200) {
+    if (m.code === 404) throw new Error("BrickLink has no item with that number.");
+    throw new Error("BrickLink: " + (m.description || m.message || "unknown error"));
+  }
+  return d.data;
+}
+const TYPE_L = { PART: "P", MINIFIG: "M", SET: "S", GEAR: "G", BOOK: "B", INSTRUCTION: "I", CATALOG: "C", ORIGINAL_BOX: "O" };
+const imgURL = (type, no, color) => `https://img.bricklink.com/ItemImage/${TYPE_L[type] || "P"}N/${color || 0}/${encodeURIComponent(no)}.png`;
+
+async function ensureColors() {
+  if (colors && colors.t > Date.now() - 30 * 864e5) return;
+  const list = await bl("colors");
+  colors = { t: Date.now(), m: {} };
+  list.forEach(c => colors.m[c.color_id] = { n: c.color_name, h: c.color_code || "cccccc" });
+  write(CKEY, colors);
+}
+const colorOf = id => (colors && colors.m[id]) || { n: id ? "Color " + id : "", h: "cccccc" };
+
+const isBL = rec => (rec.source || "bl") === "bl";
+const SRC_NAME = { rb: "Rebrickable", bl: "BrickLink" };
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+async function rb(path) {
+  for (let a = 0; a < 5; a++) {
+    const d = await relay("/rb/" + path);
+    if (d.error) throw new Error(d.error);
+    if (d.detail) {
+      if (/throttl/i.test(d.detail)) { await sleep(1500 * (a + 1)); continue; }
+      if (/not found/i.test(d.detail)) throw new Error("Rebrickable has no set with that number.");
+      throw new Error("Rebrickable: " + d.detail);
+    }
+    return d;
+  }
+  throw new Error("Rebrickable is busy. Try again in a minute.");
+}
+async function rbAll(path) {
+  let p = path, out = [];
+  for (let i = 0; i < 30 && p; i++) {
+    const d = await rb(p);
+    out = out.concat(d.results || []);
+    p = d.next ? d.next.replace(/^https?:\/\/rebrickable\.com\/api\/v3\/lego\//, "") : null;
+  }
+  return out;
+}
+async function fetchSetRB(num) {
+  const n = encodeURIComponent(num);
+  const info = await rb(`sets/${n}/`);
+  const parts = await rbAll(`sets/${n}/parts/?page_size=1000`);
+  const figs = await rbAll(`sets/${n}/minifigs/?page_size=1000`);
+  const items = []; let i = 0;
+  const mk = (p, qty, fig) => items.push({
+    id: num + ":" + (i++), src: num, type: "PART", no: p.part.part_num, name: p.part.name,
+    colorId: p.color.id, colorName: p.color.name, hex: p.color.rgb || "cccccc", img: p.part.part_img_url || "",
+    qty, unit: qty, fig: fig ? fig.set_name : "", figNo: fig ? fig.set_num : "", done: false, miss: 0, t: 0
+  });
+  parts.filter(p => !p.is_spare).forEach(p => mk(p, p.quantity));
+  for (const f of figs) {
+    let fp = null;
+    try { fp = await rbAll(`minifigs/${encodeURIComponent(f.set_num)}/parts/?page_size=1000`); } catch (e) {}
+    if (fp && fp.length) fp.filter(p => !p.is_spare).forEach(p => mk(p, p.quantity * f.quantity, f));
+    else items.push({ id: num + ":" + (i++), src: num, type: "MINIFIG", no: f.set_num, name: f.set_name, colorId: 0, colorName: "", hex: "cccccc",
+      img: f.set_img_url || "", qty: f.quantity, unit: f.quantity, fig: f.set_name, figNo: f.set_num, done: false, miss: 0, t: 0 });
+  }
+  return { set: { num, name: info.name, year: info.year || "", img: info.set_img_url || "", copies: 1 }, items };
+}
+const fetchSet = (num, source) => source === "rb" ? fetchSetRB(num) : fetchSetBL(num);
+async function fetchSetBL(num) {
+  await ensureColors();
+  const n = encodeURIComponent(num);
+  const info = await bl(`items/SET/${n}`);
+  const subs = await bl(`items/SET/${n}/subsets?break_minifigs=false&break_subsets=true`);
+  const entries = [];
+  subs.forEach(g => g.entries.forEach(e => { if (!e.is_alternate && !e.is_counterpart) entries.push(e); }));
+  const figs = entries.filter(e => e.item.type === "MINIFIG");
+  const figParts = await Promise.all(figs.map(f => bl(`items/MINIFIG/${encodeURIComponent(f.item.no)}/subsets?break_subsets=true`).catch(() => null)));
+  const items = []; let i = 0;
+  const mk = (e, qty, fig) => {
+    const c = colorOf(e.color_id);
+    items.push({
+      id: num + ":" + (i++), src: num, type: e.item.type, no: e.item.no, name: decode(e.item.name),
+      colorId: e.color_id || 0, colorName: e.color_id ? c.n : "", hex: c.h, qty, unit: qty,
+      fig: fig ? decode(fig.item.name) : "", figNo: fig ? fig.item.no : "", done: false, miss: 0, t: 0
+    });
+  };
+  entries.forEach(e => { if (e.item.type !== "MINIFIG") mk(e, e.quantity); });
+  figs.forEach((f, k) => {
+    const ps = figParts[k];
+    if (!ps) { mk(f, f.quantity, f); return; }
+    ps.forEach(g => g.entries.forEach(e => { if (!e.is_alternate && !e.is_counterpart) mk(e, e.quantity * f.quantity, f); }));
+  });
+  const img = info.image_url ? "https:" + String(info.image_url).replace(/^https?:/, "") : imgURL("SET", num, 0);
+  return { set: { num, name: decode(info.name), year: info.year_released || "", img, copies: 1 }, items };
+}
+
+async function startInventory(raw, label) {
+  if (!relayOn()) throw new Error("Connect the relay in Settings first.");
+  const source = prefs.source === "bl" ? "bl" : "rb";
+  const { set, items } = await fetchSet(normSet(raw), source);
+  const id = "inv-" + Date.now().toString(36);
+  store.inv[id] = { id, source, label: label.trim(), sets: [set], items, status: "progress", notes: "", notesT: 0, created: Date.now(), updated: Date.now() };
+  persist(); scheduleSync();
+  return id;
+}
+async function addToLot(id, raw) {
+  const num = normSet(raw);
+  const have = store.inv[id].sets.find(s => s.num === num);
+  if (have) {
+    if (!confirm(`Add another copy of ${num}? Quantities for its parts will increase, and parts already marked Complete will need checking again.`)) return false;
+    const r = store.inv[id], t = Date.now();
+    have.copies = (have.copies || 1) + 1;
+    r.items.forEach(i => { if (i.src === num) { i.unit = i.unit || i.qty / (have.copies - 1); i.qty += i.unit; i.done = false; i.t = t; } });
+    touch(r); return "copy";
+  }
+  const { set, items } = await fetchSet(num, store.inv[id].source || "bl");
+  const r = store.inv[id]; r.sets.push(set); r.items.push(...items); touch(r);
+  return "set";
+}
+
+/* ---------- prices ---------- */
+async function priceOne(type, no, color, cond, force) {
+  const k = `${type}|${no}|${color}|${cond}`, c = priceCache[k];
+  if (!force && c && c.t > Date.now() - 14 * 864e5) return c.v;
+  const d = await bl(`items/${type}/${encodeURIComponent(no)}/price?guide_type=sold&new_or_used=${cond}&currency_code=USD${color ? "&color_id=" + color : ""}`);
+  const v = Number(d.total_quantity) > 0 ? Number(d.avg_price) : null;
+  priceCache[k] = { v, t: Date.now() };
+  return v;
+}
+async function loadPrices(recId, force) {
+  if (!relayOn() || ui.prices || !store.inv[recId] || !isBL(store.inv[recId])) return;
+  const ids = store.inv[recId].items.filter(i => force || i.pT == null).map(i => i.id);
+  if (!ids.length) return;
+  ui.prices = { recId, done: 0, total: ids.length, err: "" }; updProgress();
+  let next = 0;
+  const worker = async () => {
+    while (next < ids.length && !ui.prices.err) {
+      const id = ids[next++];
+      const it0 = store.inv[recId] && store.inv[recId].items.find(x => x.id === id);
+      if (!it0) continue;
+      try {
+        const [pn, pu] = await Promise.all([priceOne(it0.type, it0.no, it0.colorId, "N", force), priceOne(it0.type, it0.no, it0.colorId, "U", force)]);
+        const it = store.inv[recId] && store.inv[recId].items.find(x => x.id === id);
+        if (it) { it.pN = pn; it.pU = pu; it.pT = Date.now(); refreshItem(it); }
+      } catch (e) { ui.prices.err = e.message; }
+      ui.prices.done++;
+      if (ui.prices.done % 25 === 0) { persist(); write(PCKEY, priceCache); }
+      updProgress();
+    }
+  };
+  await Promise.all([worker(), worker(), worker()]);
+  const err = ui.prices.err; ui.prices = null; write(PCKEY, priceCache);
+  const r = store.inv[recId]; if (r) { r.updated = Date.now(); persist(); scheduleSync(); }
+  updProgress();
+  if (err) toast("Prices stopped: " + err);
+  if (ui.screen === "report") render(true);
+}
+
+/* ---------- sync ---------- */
+function mergeItem(a, b) {
+  const s = (a.t || 0) >= (b.t || 0) ? a : b, p = (a.pT || 0) >= (b.pT || 0) ? a : b;
+  return { ...s, pN: p.pN, pU: p.pU, pT: p.pT };
+}
+function mergeRec(x, y) {
+  const [nw, od] = (y.updated || 0) > (x.updated || 0) ? [y, x] : [x, y];
+  const m = { ...od, ...nw };
+  const omap = new Map((od.items || []).map(i => [i.id, i])), seen = new Set(), items = [];
+  for (const it of nw.items || []) { const o = omap.get(it.id); items.push(o ? mergeItem(it, o) : it); seen.add(it.id); }
+  for (const it of od.items || []) if (!seen.has(it.id)) items.push(it);
+  m.items = items;
+  const sets = [...(nw.sets || [])]; for (const s of od.sets || []) if (!sets.some(z => z.num === s.num)) sets.push(s);
+  m.sets = sets;
+  const nt = (x.notesT || 0) >= (y.notesT || 0) ? x : y; m.notes = nt.notes; m.notesT = nt.notesT || 0;
+  m.updated = Math.max(x.updated || 0, y.updated || 0);
+  return m;
+}
+function applyRemote(d) {
+  for (const [id, t] of Object.entries(d.deleted || {})) store.deleted[id] = Math.max(store.deleted[id] || 0, t);
+  for (const [id, r] of Object.entries(d.inv || {})) { if (!r) continue; const cur = store.inv[id]; store.inv[id] = cur ? mergeRec(cur, r) : r; }
+  for (const id of Object.keys(store.deleted)) if (store.inv[id] && store.deleted[id] >= (store.inv[id].updated || 0)) delete store.inv[id];
+}
+let syncTimer = null, syncing = false, fullNext = true;
+function syncChip() {
+  if (!relayOn()) return `<button id="syncchip" class="chip-s" data-act="settings">Sync off</button>`;
+  const label = { ok: "Synced", pending: "Saving…", syncing: "Syncing…", error: "Sync failed" }[ui.sync] || "Sync";
+  return `<button id="syncchip" class="chip-s ${ui.sync}" data-act="syncnow" title="${esc(ui.syncMsg)}">${label}</button>`;
+}
+function setSync(s, msg = "") { ui.sync = s; ui.syncMsg = msg; const el = $("#syncchip"); if (el) el.outerHTML = syncChip(); }
+function scheduleSync() {
+  if (!relayOn()) return;
+  if (!syncing) setSync("pending");
+  if (!syncTimer) syncTimer = setTimeout(() => { syncTimer = null; doSync(); }, 15000);
+}
+async function doSync() {
+  if (!relayOn()) return;
+  if (syncing) { scheduleSync(); return; }
+  clearTimeout(syncTimer); syncTimer = null; syncing = true; setSync("syncing");
+  const start = Date.now(), full = fullNext, inv = {};
+  for (const [id, r] of Object.entries(store.inv)) if (full || (r.updated || 0) > syncMeta.lastPush) inv[id] = r;
+  try {
+    const d = await relay("/sync", { method: "POST", body: JSON.stringify({ since: full ? 0 : syncMeta.since, inv, deleted: store.deleted }) });
+    if (d.error) throw new Error(d.error);
+    const before = ui.rec && store.inv[ui.rec] ? JSON.stringify(store.inv[ui.rec]) : "";
+    applyRemote(d);
+    syncMeta = { since: d.now, lastPush: start }; write(MKEY, syncMeta); fullNext = false; persist();
+    setSync("ok", "Last synced " + new Date().toLocaleTimeString());
+    const after = ui.rec && store.inv[ui.rec] ? JSON.stringify(store.inv[ui.rec]) : "";
+    if (ui.rec && !store.inv[ui.rec]) { ui.rec = null; ui.screen = "home"; render(); }
+    else if (before !== after || ui.screen === "home") softRefresh();
+  } catch (e) { setSync("error", e.message); }
+  finally { syncing = false; }
+}
+function softRefresh() {
+  const y = window.scrollY;
+  if (ui.screen === "inv") { renderList(); renderChips(); updProgress(); }
+  else render(true);
+  window.scrollTo(0, y);
+}
+
+/* ---------- stats / filters / sorting ---------- */
+function stats(items) {
+  let res = 0, mp = 0, ml = 0, vu = 0, vn = 0, unk = 0;
+  for (const i of items) {
+    if (i.done || i.miss) res++;
+    if (i.miss) { mp += i.miss; ml++; if (i.pU != null) vu += i.miss * i.pU; else unk++; if (i.pN != null) vn += i.miss * i.pN; }
+  }
+  return { lines: items.length, res, mp, ml, vu, vn, unk, pct: items.length ? Math.round(res / items.length * 100) : 0 };
+}
+function progressText(rec) {
+  const st = stats(rec.items);
+  let t = `${st.res} of ${st.lines} lines checked, ${st.mp} piece${st.mp === 1 ? "" : "s"} missing`;
+  if (st.mp && st.vu) t += ` (about ${money(st.vu)} used)`;
+  if (ui.prices && ui.prices.recId === rec.id) t += `. Loading prices ${ui.prices.done} of ${ui.prices.total}`;
+  return t;
+}
+function baseItems(rec) {
+  let a = rec.items;
+  if (ui.setf !== "all") a = a.filter(i => i.src === ui.setf);
+  if (prefs.src === "fig") a = a.filter(i => i.figNo); else if (prefs.src === "set") a = a.filter(i => !i.figNo);
+  return a;
+}
+const pv = v => v == null ? -1 : v;
+const CMP = {
+  color: (x, y) => nc(x.colorName, y.colorName), name: (x, y) => nc(x.name, y.name), num: (x, y) => nc(x.no, y.no),
+  qty: (x, y) => y.qty - x.qty, vu: (x, y) => pv(y.pU) - pv(x.pU), vn: (x, y) => pv(y.pN) - pv(x.pN)
+};
+function sortItems(a) { const keys = prefs.sort.concat(["num", "color"]); return a.sort((x, y) => { for (const k of keys) { const c = CMP[k](x, y); if (c) return c; } return 0; }); }
+function visibleItems(rec) {
+  let a = baseItems(rec);
+  if (ui.color !== "all") a = a.filter(i => String(i.colorId) === ui.color);
+  const st = prefs.status;
+  if (st === "todo") a = a.filter(i => !i.done && !i.miss);
+  else if (st === "missing") a = a.filter(i => i.miss > 0);
+  else if (st === "done") a = a.filter(i => i.done);
+  const q = ui.q.trim().toLowerCase();
+  if (q) a = a.filter(i => (i.no + " " + i.name + " " + i.colorName + " " + i.fig).toLowerCase().includes(q));
+  return sortItems(a.slice());
+}
+
+/* ---------- rendering ---------- */
+function render(keepScroll) {
+  const app = $("#app"), rec = store.inv[ui.rec];
+  if ((ui.screen === "inv" || ui.screen === "report") && !rec) ui.screen = "home";
+  if (ui.screen === "home") app.innerHTML = homeHTML();
+  else if (ui.screen === "inv") app.innerHTML = invHTML(rec);
+  else if (ui.screen === "report") app.innerHTML = reportHTML(rec);
+  else if (ui.screen === "settings") app.innerHTML = settingsHTML();
+  if (!keepScroll) window.scrollTo(0, 0);
+}
+const selectHTML = (id, opts, val, label) => `<select class="mini" id="${id}" aria-label="${label}">${opts.map(([v, l]) => `<option value="${esc(v)}" ${val === v ? "selected" : ""}>${esc(l)}</option>`).join("")}</select>`;
+
+function homeHTML() {
+  const recs = Object.values(store.inv).sort((a, b) => b.updated - a.updated);
+  return `
+  <div class="row nowrap"><h1 class="grow">BrickCheck</h1>${syncChip()}<button class="btn small" data-act="settings">Settings</button></div>
+  <p class="sub">Inventory used LEGO sets against ${SRC_NAME[prefs.source]} part lists. Progress saves as you tap${relayOn() ? " and syncs across your devices" : ""}.</p>
+  <div class="card">
+    <div class="row">
+      <input type="text" id="setnum" class="grow" style="flex:1 1 160px" autocomplete="off" autocapitalize="off" placeholder="Set number, like 9472 or 9472-1">
+    </div>
+    <input type="text" id="label" style="margin-top:8px" autocomplete="off" placeholder="Description (optional), like Purchased on eBay 11/7/26">
+    <div class="row" style="margin-top:8px"><button class="btn primary" data-act="add" ${ui.busy ? "disabled" : ""}>${ui.busy ? "Loading…" : "Start inventory"}</button></div>
+    ${ui.error ? `<p class="err">${esc(ui.error)}</p>` : ""}
+    ${relayOn() ? "" : `<p class="sub" style="margin:8px 0 0">First, connect the relay in <a href="#" data-act="settings">Settings</a>.</p>`}
+  </div>
+  <h2>Inventories</h2>
+  ${recs.length ? recs.map(r => { const st = stats(r.items); return `
+    <button class="setrow" data-act="open" data-id="${esc(r.id)}">
+      <img src="${esc(r.sets[0].img)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">
+      <span class="grow"><span class="t">${esc(recTitle(r))}</span><br>
+      ${r.label ? `<span style="font-size:14px">${esc(r.label)}</span><br>` : ""}
+      <span class="sub" style="margin:0;font-size:13px">${r.sets.length > 1 ? r.sets.length + "-set lot, " : ""}${SRC_NAME[r.source || "bl"]}, ${r.items.length} lines, updated ${fmtDate(r.updated)}</span>
+      <span class="bar"><i style="width:${st.pct}%"></i></span></span>
+      <span style="text-align:right;flex:none;display:flex;flex-direction:column;gap:4px;align-items:flex-end">
+        <span class="pill ${r.status === "complete" ? "done" : ""}">${r.status === "complete" ? "Complete" : st.pct + "%"}</span>
+        ${st.mp ? `<span class="pill miss">${st.mp} missing</span>` : ""}
+        ${st.mp && st.vu ? `<span class="pill miss">${money(st.vu)} used</span>` : ""}
+      </span>
+    </button>`; }).join("") : `<p class="sub">No inventories yet. Enter a set number above.</p>`}`;
+}
+
+function settingsHTML() {
+  return `
+  <div class="row noprint"><button class="btn small" data-act="home">← Back</button></div>
+  <h1>Settings</h1>
+  <h2>Appearance</h2>
+  <div class="card">
+    <span class="seg">${[["auto", "Match device"], ["light", "Light"], ["dark", "Dark"]].map(([v, l]) => `<button data-act="theme" data-v="${v}" class="${prefs.theme === v ? "on" : ""}">${l}</button>`).join("")}</span>
+    <p class="sub" style="margin:8px 0 0;font-size:14px">This setting is saved separately on each device.</p>
+  </div>
+  <h2>Part data source</h2>
+  <div class="card">
+    <span class="seg">${[["rb", "Rebrickable"], ["bl", "BrickLink"]].map(([v, l]) => `<button data-act="source" data-v="${v}" class="${prefs.source === v ? "on" : ""}">${l}</button>`).join("")}</span>
+    <p class="sub" style="margin:8px 0 0;font-size:14px">Applies to new inventories. Each inventory keeps the source it started with. Part values are only available from BrickLink.</p>
+  </div>
+  <h2>Relay</h2>
+  <div class="card">
+    <p class="sub" style="margin-top:0">Paste the relay URL and app key from your Cloudflare setup. Enter the same two values on each device to sync.</p>
+    <input type="url" id="relayurl" value="${esc(prefs.relay)}" placeholder="https://brickcheck-relay.yourname.workers.dev" autocapitalize="off" autocomplete="off">
+    <input type="password" id="appkey" value="${esc(prefs.appKey)}" placeholder="App key" autocomplete="off" style="margin-top:8px">
+    <div class="row" style="margin-top:10px"><button class="btn primary" data-act="savetest" ${ui.busy ? "disabled" : ""}>${ui.busy ? "Testing…" : "Save and test"}</button>${syncChip()}</div>
+    ${ui.setMsg ? `<p class="${ui.setMsg.startsWith("Connected") ? "okmsg" : "err"}">${esc(ui.setMsg)}</p>` : ""}
+  </div>
+  <h2>Backup</h2>
+  <div class="card">
+    <p class="sub" style="margin-top:0">Sync keeps your devices matched. A backup file is a second copy you control.</p>
+    <div class="row">
+      <button class="btn" data-act="export">Save backup file</button>
+      <button class="btn" data-act="import">Restore from backup</button>
+      <input type="file" id="importfile" accept="application/json,.json" hidden>
+    </div>
+    <p class="sub" style="margin:10px 0 0;font-size:14px">Restoring merges the file with what’s here; the newest change to each part wins.</p>
+  </div>`;
+}
+
+function sortSelects() {
+  const sel = (i, allowNone) => `<select class="mini" id="sort${i}" aria-label="${i ? "Then sort by" : "Sort by"}">
+    ${allowNone ? `<option value="">then…</option>` : ""}
+    ${SORTS.filter(([v]) => (v !== "vu" && v !== "vn") || !store.inv[ui.rec] || isBL(store.inv[ui.rec]))
+      .filter(([v]) => v === prefs.sort[i] || !prefs.sort.slice(0, i).includes(v))
+      .map(([v, l]) => `<option value="${v}" ${prefs.sort[i] === v ? "selected" : ""}>${i ? "then " + l.toLowerCase() : "Sort: " + l.toLowerCase()}</option>`).join("")}
+  </select>`;
+  let h = sel(0, false);
+  for (let i = 1; i <= Math.min(prefs.sort.length, 3); i++) h += sel(i, true);
+  return h;
+}
+
+function invHTML(rec) {
+  const lot = rec.sets.length > 1, st = stats(rec.items);
+  return `
+  <div class="top noprint">
+    <div class="row nowrap">
+      <button class="btn small" data-act="home">← Back</button>
+      <h1 class="grow ttl">${esc(recTitle(rec))}</h1>
+      ${syncChip()}
+      <button class="btn small primary" data-act="report">Report</button>
+    </div>
+    ${rec.label ? `<div class="pstat" id="hlabel" style="color:var(--ink)">${esc(rec.label)}</div>` : ""}
+    <div class="bar"><i id="pbar" style="width:${st.pct}%"></i></div>
+    <div class="pstat" id="pstat">${esc(progressText(rec))}</div>
+  </div>
+  <div class="controls noprint">
+    <input type="search" id="q" placeholder="Search part #, name, color, or minifig" value="${esc(ui.q)}" autocomplete="off" autocapitalize="off">
+    <div class="row">
+      <span class="seg"><button data-act="view" data-v="grid" class="${viewMode() === "grid" ? "on" : ""}">Grid</button><button data-act="view" data-v="list" class="${viewMode() === "list" ? "on" : ""}">List</button></span>
+      ${selectHTML("status", [["all", "All parts"], ["todo", "To check"], ["missing", "Missing"], ["done", "Complete"]], prefs.status, "Show")}
+      ${selectHTML("src", [["all", "Set and minifig parts"], ["set", "Set parts only"], ["fig", "Minifig parts only"]], prefs.src, "Part source")}
+      ${lot ? selectHTML("setf", [["all", "All sets in lot"], ...rec.sets.map(s => [s.num, "Set " + s.num])], ui.setf, "Set") : ""}
+    </div>
+    <div class="row" id="sorts">${sortSelects()}</div>
+    <div class="chips" id="chips">${chipsHTML(rec)}</div>
+  </div>
+  <div id="list" class="${viewMode()}">${listHTML(rec)}</div>
+  <div class="card noprint" style="margin-top:16px">
+    <input type="text" id="reclabel" value="${esc(rec.label || "")}" autocomplete="off" placeholder="Description, like Purchased on eBay 11/7/26" aria-label="Description" style="margin-bottom:8px">
+    <textarea id="notes" placeholder="Notes: where it came from, condition, price paid">${esc(rec.notes)}</textarea>
+    <div class="row" style="margin-top:10px">
+      <button class="btn primary" data-act="finish">${rec.status === "complete" ? "Reopen inventory" : "Mark inventory complete"}</button>
+      <button class="btn" data-act="reprice">Refresh prices</button>
+      <button class="btn danger" data-act="reset">Reset progress</button>
+      <button class="btn danger" data-act="delete">Delete</button>
+    </div>
+    <h2>Multi-set lot</h2>
+    <p class="sub">Add another set to inventory it together with this one. Enter this set’s own number to add another copy; its quantities combine into the same lines.</p>
+    <div class="row"><input type="text" id="lotnum" class="grow" style="flex:1 1 140px" placeholder="Set number" autocomplete="off" autocapitalize="off"><button class="btn" data-act="addlot" ${ui.busy ? "disabled" : ""}>${ui.busy ? "Loading…" : "Add set to lot"}</button></div>
+    ${ui.lotErr ? `<p class="err">${esc(ui.lotErr)}</p>` : ""}
+  </div>`;
+}
+
+function chipsHTML(rec) {
+  const m = new Map();
+  for (const i of baseItems(rec)) {
+    const k = String(i.colorId);
+    const e = m.get(k) || { n: i.colorName || "No color", h: i.hex, open: 0 };
+    if (!i.done && !i.miss) e.open++;
+    m.set(k, e);
+  }
+  if (ui.color !== "all" && !m.has(ui.color)) ui.color = "all";
+  const arr = [...m.entries()].sort((a, b) => nc(a[1].n, b[1].n));
+  return `<button class="chip ${ui.color === "all" ? "on" : ""}" data-act="color" data-c="all">All colors</button>` +
+    arr.map(([k, e]) => `<button class="chip ${ui.color === k ? "on" : ""} ${e.open ? "" : "clear"}" data-act="color" data-c="${esc(k)}"><i style="background:#${esc(e.h)}"></i>${esc(e.n)}<span>${e.open || "✓"}</span></button>`).join("");
+}
+function listHTML(rec) {
+  const a = visibleItems(rec), lot = rec.sets.length > 1;
+  return a.length ? a.map(i => itemHTML(i, rec)).join("") : `<p class="sub">No parts match.</p>`;
+}
+function itemHTML(it, rec) {
+  const ok = it.done, bad = it.miss > 0, lot = rec.sets.length > 1;
+  const px = !isBL(rec) ? "" : it.pT == null ? (ui.prices ? "Loading prices…" : "No prices yet") : `New ${money(it.pN)}, used ${money(it.pU)}`;
+  return `<div class="item ${ok ? "st-ok" : ""} ${bad ? "st-bad" : ""}" data-id="${esc(it.id)}">
+    <div class="pic"><img loading="lazy" src="${esc(it.img || imgURL(it.type, it.no, it.colorId))}" alt="" onerror="this.style.visibility='hidden'"><span class="qty">${it.qty}×</span></div>
+    <div class="meta"><b>${esc(it.no)}</b><span class="nm">${esc(it.name)}</span>
+      ${it.colorId ? `<span class="col"><i style="background:#${esc(it.hex)}"></i>${esc(it.colorName)}</span>` : ""}
+      ${it.fig ? `<span class="fig">Minifig: ${esc(it.fig)}</span>` : ""}
+      ${lot ? `<span class="fig">Set ${esc(it.src)}</span>` : ""}
+      ${px ? `<span class="px">${px}</span>` : ""}
+      ${bad ? `<span class="missnote">${it.miss} of ${it.qty} missing</span>` : ""}
+    </div>
+    <div class="acts">
+      <button class="cmp ${ok ? "on" : ""}" data-act="complete">${ok ? "✓ Complete" : "Complete"}</button>
+      <div class="mrow"><button class="mis ${bad ? "on" : ""}" data-act="miss">${bad ? "Missing " + it.miss : "Missing"}</button>${bad ? `<button class="dec" data-act="dec" aria-label="One fewer missing">−</button>` : ""}</div>
+    </div>
+  </div>`;
+}
+function renderList() { const rec = store.inv[ui.rec], l = $("#list"); if (rec && l) { l.className = viewMode(); l.innerHTML = listHTML(rec); } }
+function renderChips() { const rec = store.inv[ui.rec], c = $("#chips"); if (rec && c) { const x = c.scrollLeft; c.innerHTML = chipsHTML(rec); c.scrollLeft = x; } }
+function updProgress() {
+  const rec = store.inv[ui.rec]; if (!rec || ui.screen !== "inv") return;
+  const b = $("#pbar"), p = $("#pstat"); if (!b || !p) return;
+  b.style.width = stats(rec.items).pct + "%"; p.textContent = progressText(rec);
+}
+function refreshItem(it) {
+  if (ui.screen !== "inv") return;
+  const el = document.querySelector(`.item[data-id="${CSS.escape(it.id)}"]`);
+  if (el) el.outerHTML = itemHTML(it, store.inv[ui.rec]);
+}
+
+function reportHTML(rec) {
+  const lot = rec.sets.length > 1, st = stats(rec.items);
+  const miss = sortItems(rec.items.filter(i => i.miss > 0).slice());
+  const unchecked = st.lines - st.res;
+  return `
+  <div class="row noprint" style="margin-bottom:8px">
+    <button class="btn small" data-act="back">← Inventory</button>
+    <span class="grow"></span>
+    <button class="btn small" data-act="wanted">${isBL(rec) ? "Copy BrickLink wanted list" : "Copy Rebrickable parts list"}</button>
+    <button class="btn small primary" data-act="print">Print</button>
+  </div>
+  <h1>Missing parts</h1>
+  ${rec.label ? `<p style="margin:2px 0 6px;font-weight:600">${esc(rec.label)}</p>` : ""}
+  ${rec.sets.map(s => `<p style="margin:2px 0"><b>${esc(s.num)}</b>${(s.copies || 1) > 1 ? " ×" + s.copies + " copies," : ""} ${esc(s.name)}${s.year ? " (" + s.year + ")" : ""}</p>`).join("")}
+  <p class="sub" style="margin-top:6px">Source: ${SRC_NAME[rec.source || "bl"]}. ${rec.status === "complete" ? "Inventory completed " + fmtDate(rec.updated) : "Inventory in progress, updated " + fmtDate(rec.updated)}</p>
+  <p class="big">${st.mp} piece${st.mp === 1 ? "" : "s"} missing across ${st.ml} line${st.ml === 1 ? "" : "s"}</p>
+  ${st.mp && isBL(rec) ? `<p>Cost to replace, at BrickLink 6-month averages: about <b>${money(st.vu)} used</b> or <b>${money(st.vn)} new</b>${st.unk ? ` (${st.unk} line${st.unk === 1 ? "" : "s"} without price data)` : ""}.</p>` : ""}
+  ${unchecked ? `<p class="sub">${unchecked} line${unchecked === 1 ? "" : "s"} not yet checked.</p>` : ""}
+  ${rec.notes ? `<p>${esc(rec.notes).replace(/\n/g, "<br>")}</p>` : ""}
+  ${miss.length ? `<div class="tablewrap"><table class="rep">
+    <thead><tr><th>Image</th><th>Part #</th><th>Description</th><th>Color</th>${lot ? "<th>Set</th>" : ""}<th class="num">Missing</th>${isBL(rec) ? `<th class="num">Used ea.</th><th class="num">New ea.</th>` : ""}</tr></thead>
+    <tbody>${miss.map(i => `<tr>
+      <td><img src="${esc(i.img || imgURL(i.type, i.no, i.colorId))}" alt="" onerror="this.style.visibility='hidden'"></td>
+      <td><b>${esc(i.no)}</b></td>
+      <td>${esc(i.name)}${i.fig ? `<br><span class="fig">Minifig: ${esc(i.fig)}</span>` : ""}</td>
+      <td>${esc(i.colorName)}</td>${lot ? `<td>${esc(i.src)}</td>` : ""}
+      <td class="num big">${i.miss}${i.miss !== i.qty ? ` <span class="sub" style="font-size:13px;font-weight:400">of ${i.qty}</span>` : ""}</td>
+      ${isBL(rec) ? `<td class="num">${money(i.pU)}</td><td class="num">${money(i.pN)}</td>` : ""}</tr>`).join("")}
+    </tbody></table></div>` : `<p class="sub">Nothing marked missing.</p>`}`;
+}
+
+/* ---------- events ---------- */
+function touch(rec) { rec.updated = Date.now(); persist(); scheduleSync(); }
+function itemAct(act, el) {
+  const rec = store.inv[ui.rec]; if (!rec) return;
+  const it = rec.items.find(i => i.id === el.closest(".item").dataset.id); if (!it) return;
+  if (act === "complete") { if (it.done) it.done = false; else { it.done = true; it.miss = 0; } }
+  else if (act === "miss") { if (it.miss >= it.qty) { toast(`All ${it.qty} are already marked missing`); return; } it.miss++; it.done = false; }
+  else if (act === "dec") it.miss = Math.max(0, it.miss - 1);
+  it.t = Date.now(); touch(rec); refreshItem(it); renderChips(); updProgress();
+}
+
+document.addEventListener("click", async e => {
+  const el = e.target.closest("[data-act]"); if (!el) return;
+  e.preventDefault();
+  const act = el.dataset.act, rec = store.inv[ui.rec];
+  switch (act) {
+    case "complete": case "miss": case "dec": itemAct(act, el); break;
+    case "add": {
+      const v = $("#setnum").value, lb = $("#label").value; if (!v.trim() || ui.busy) return;
+      const restore = () => { $("#setnum").value = v; $("#label").value = lb; };
+      ui.busy = true; ui.error = ""; render(); restore();
+      try { const id = await startInventory(v, lb); ui.busy = false; openRec(id); loadPrices(id); }
+      catch (err) { ui.busy = false; ui.error = err.message; render(); restore(); }
+      break;
+    }
+    case "open": openRec(el.dataset.id); loadPrices(el.dataset.id); break;
+    case "home": ui.screen = "home"; ui.error = ""; ui.setMsg = ""; render(); break;
+    case "settings": ui.screen = "settings"; render(); break;
+    case "back": ui.screen = "inv"; render(); break;
+    case "report": ui.screen = "report"; render(); break;
+    case "print": window.print(); break;
+    case "view": prefs.view = el.dataset.v; savePrefs(); render(true); break;
+    case "color": ui.color = el.dataset.c; renderChips(); renderList(); break;
+    case "finish": rec.status = rec.status === "complete" ? "progress" : "complete"; touch(rec); render(true); toast(rec.status === "complete" ? "Inventory marked complete" : "Inventory reopened"); break;
+    case "reprice": if (!relayOn()) toast("Connect the relay in Settings first."); else if (ui.prices) toast("Prices are already loading."); else loadPrices(rec.id, true); break;
+    case "reset": if (confirm("Clear every Complete and Missing mark for this inventory?")) { const t = Date.now(); rec.items.forEach(i => { i.done = false; i.miss = 0; i.t = t; }); rec.status = "progress"; touch(rec); render(true); } break;
+    case "delete": if (confirm("Delete this inventory on all your devices? This cannot be undone.")) { store.deleted[rec.id] = Date.now(); delete store.inv[rec.id]; persist(); scheduleSync(); ui.rec = null; ui.screen = "home"; render(); } break;
+    case "addlot": {
+      const v = $("#lotnum").value; if (!v.trim() || ui.busy) return;
+      ui.busy = true; ui.lotErr = ""; render(true);
+      try { const res = await addToLot(rec.id, v); ui.busy = false; render(true); if (res) { toast(res === "copy" ? "Added another copy of " + normSet(v) : "Added " + normSet(v) + " to this lot"); loadPrices(rec.id); } }
+      catch (err) { ui.busy = false; ui.lotErr = err.message; render(true); $("#lotnum").value = v; }
+      break;
+    }
+    case "savetest": {
+      prefs.relay = $("#relayurl").value.trim(); prefs.appKey = $("#appkey").value.trim(); savePrefs();
+      ui.busy = true; ui.setMsg = ""; render(true);
+      try {
+        const d = await relay("/"); if (d.error) throw new Error(d.error);
+        if (!d.sync) throw new Error("The relay has no KV namespace bound as SYNC.");
+        if (prefs.source === "bl") {
+          if (!d.bricklink) throw new Error("The relay doesn’t have BrickLink keys yet. Switch the data source to Rebrickable, or add the BrickLink secrets.");
+          colors = null; await ensureColors();
+        } else {
+          if (!d.rebrickable) throw new Error("The relay doesn’t have a Rebrickable key yet. Add the RB_KEY secret on Cloudflare.");
+          await rb("colors/?page_size=1");
+        }
+        ui.setMsg = "Connected to " + SRC_NAME[prefs.source] + ". Sync is on.";
+        fullNext = true; doSync();
+      } catch (err) { ui.setMsg = err.message; }
+      ui.busy = false; render(true); break;
+    }
+    case "syncnow": doSync(); break;
+    case "source": prefs.source = el.dataset.v; savePrefs(); ui.setMsg = ""; render(true); break;
+    case "theme": prefs.theme = el.dataset.v; savePrefs(); applyTheme(); render(true); break;
+    case "export": {
+      const blob = new Blob([JSON.stringify({ app: "brickcheck", version: 2, exported: Date.now(), store })], { type: "application/json" });
+      const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+      a.download = "brickcheck-backup-" + new Date().toISOString().slice(0, 10) + ".json";
+      document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); break;
+    }
+    case "import": $("#importfile").click(); break;
+    case "wanted": {
+      if (!isBL(rec)) {
+        const csv = ["Part,Color,Quantity"].concat(rec.items.filter(i => i.miss > 0 && i.type === "PART").map(i => `${i.no},${i.colorId},${i.miss}`)).join("\n");
+        try { await navigator.clipboard.writeText(csv); toast("Copied. On Rebrickable, create a parts list and import it."); }
+        catch (err) { prompt("Copy this:", csv); }
+        break;
+      }
+      const xml = "<INVENTORY>" + rec.items.filter(i => i.miss > 0).map(i =>
+        `<ITEM><ITEMTYPE>${TYPE_L[i.type] || "P"}</ITEMTYPE><ITEMID>${esc(i.no)}</ITEMID>${i.colorId ? `<COLOR>${i.colorId}</COLOR>` : ""}<MINQTY>${i.miss}</MINQTY></ITEM>`).join("") + "</INVENTORY>";
+      try { await navigator.clipboard.writeText(xml); toast("Copied. On BrickLink, go to Wanted, then Upload, and paste it."); }
+      catch (err) { prompt("Copy this:", xml); }
+      break;
+    }
+  }
+});
+function openRec(id) { ui.rec = id; ui.screen = "inv"; ui.q = ""; ui.color = "all"; ui.setf = "all"; ui.lotErr = ""; render(); }
+
+document.addEventListener("change", e => {
+  const t = e.target;
+  if (t.id === "status" || t.id === "src") { prefs[t.id] = t.value; savePrefs(); renderChips(); renderList(); }
+  else if (t.id === "setf") { ui.setf = t.value; renderChips(); renderList(); }
+  else if (/^sort\d$/.test(t.id)) {
+    const i = +t.id.slice(4); prefs.sort = prefs.sort.slice(0, i); if (t.value) prefs.sort.push(t.value);
+    savePrefs(); $("#sorts").innerHTML = sortSelects(); renderList();
+  }
+  else if (t.id === "importfile" && t.files[0]) {
+    const r = new FileReader();
+    r.onload = () => {
+      try {
+        const d = JSON.parse(r.result), s = d.store || d;
+        const before = Object.keys(store.inv).length;
+        applyRemote({ inv: s.inv || {}, deleted: s.deleted || {} });
+        persist(); fullNext = true; scheduleSync();
+        toast("Backup restored. " + Object.keys(store.inv).length + " inventories (was " + before + ").");
+      } catch (err) { toast("That file is not a BrickCheck backup."); }
+    };
+    r.readAsText(t.files[0]); t.value = "";
+  }
+});
+let qTimer, noteTimer;
+document.addEventListener("input", e => {
+  if (e.target.id === "q") { ui.q = e.target.value; clearTimeout(qTimer); qTimer = setTimeout(renderList, 150); }
+  else if (e.target.id === "reclabel") { const rec = store.inv[ui.rec]; rec.label = e.target.value; const h = $("#hlabel"); if (h) h.textContent = rec.label; clearTimeout(noteTimer); noteTimer = setTimeout(() => touch(rec), 500); }
+  else if (e.target.id === "notes") { const rec = store.inv[ui.rec]; rec.notes = e.target.value; rec.notesT = Date.now(); clearTimeout(noteTimer); noteTimer = setTimeout(() => touch(rec), 500); }
+});
+document.addEventListener("keydown", e => {
+  if (e.key !== "Enter") return;
+  if (e.target.id === "setnum" || e.target.id === "label") $('[data-act="add"]').click();
+  if (e.target.id === "lotnum") $('[data-act="addlot"]').click();
+});
+window.addEventListener("resize", () => { if (ui.screen === "inv" && prefs.view === "auto") { const l = $("#list"); if (l && l.className !== viewMode()) render(true); } });
+document.addEventListener("visibilitychange", () => { if (relayOn()) doSync(); if (document.hidden) persist(); });
+setInterval(() => { if (relayOn() && !document.hidden) doSync(); }, 60000);
+
+render();
+if (relayOn()) doSync();
+</script>
+</body>
+</html>
