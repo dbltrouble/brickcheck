@@ -55,9 +55,11 @@ textarea{min-height:70px;resize:vertical}
 .okmsg{color:var(--ok);margin:8px 0 0}
 .chip-s{min-height:32px;padding:0 10px;border-radius:99px;border:1px solid var(--line);background:var(--surface);font-size:13px;color:var(--muted);white-space:nowrap;flex:none}
 .chip-s.ok{color:var(--ok)} .chip-s.error{color:var(--bad)}
-.setwrap{display:flex;align-items:stretch;border-radius:12px;background:var(--surface);border:1px solid var(--line);margin-bottom:8px;overflow:hidden}
-.setrow{display:flex;gap:12px;align-items:center;padding:10px;border:0;background:none;flex:1 1 auto;min-width:0;text-align:left}
-.setdel{border:0;border-left:1px solid var(--line);background:none;color:var(--bad);font-size:14px;font-weight:600;padding:0 14px;flex:none}
+.setwrap{position:relative;border-radius:12px;background:var(--surface);border:1px solid var(--line);margin-bottom:8px}
+.setrow{display:flex;gap:12px;align-items:center;padding:10px 38px 10px 10px;border:0;background:none;width:100%;min-width:0;text-align:left}
+.setdel{position:absolute;top:2px;right:2px;width:34px;height:34px;border:0;background:none;color:var(--bad);opacity:.7;display:flex;align-items:center;justify-content:center;border-radius:8px}
+.setdel:hover,.setdel:active{opacity:1}
+.setdel svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
 .setrow img{width:64px;height:64px;object-fit:contain;background:#fff;border-radius:8px;flex:none}
 .setrow .t{font-weight:650}
 .bar{height:6px;border-radius:3px;background:var(--line);overflow:hidden;margin-top:6px}
@@ -501,7 +503,7 @@ function homeHTML() {
         ${st.mp ? `<span class="pill miss">${st.mp} missing</span>` : ""}
         ${st.mp && st.vu ? `<span class="pill miss">${money(st.vu)} used</span>` : ""}
       </span>
-    </button><button class="setdel" data-act="delhome" data-id="${esc(r.id)}" aria-label="Delete inventory">Delete</button></div>`; }).join("") : `<p class="sub">No inventories yet. Enter a set number above.</p>`}`;
+    </button><button class="setdel" data-act="delhome" data-id="${esc(r.id)}" aria-label="Delete inventory"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13M10 11v5M14 11v5"/></svg></button></div>`; }).join("") : `<p class="sub">No inventories yet. Enter a set number above.</p>`}`;
 }
 
 function settingsHTML() {
@@ -594,7 +596,7 @@ function invHTML(rec) {
   </div>`;
 }
 
-const zoomHTML = () => `<span class="zoom" id="zoomctl" aria-label="Zoom"><button data-act="zoom" data-d="-1" aria-label="Smaller">A−</button><span>${Math.round((prefs.zoom || 1) * 100)}%</span><button data-act="zoom" data-d="1" aria-label="Larger">A+</button></span>`;
+const zoomHTML = () => `<span class="zoom" id="zoomctl" aria-label="Zoom"><button data-act="zoom" data-d="-1" aria-label="Smaller">−</button><span>${Math.round((prefs.zoom || 1) * 100)}%</span><button data-act="zoom" data-d="1" aria-label="Larger">+</button></span>`;
 function chipsHTML(rec) {
   const m = new Map();
   for (const i of baseItems(rec)) {
@@ -618,7 +620,7 @@ function itemHTML(it, rec) {
   return `<div class="item ${ok ? "st-ok" : ""} ${bad ? "st-bad" : ""}" data-id="${esc(it.id)}">
     <div class="pic"><img loading="lazy" class="${darkClass(it.hex)}" src="${esc(it.img || imgURL(it.type, it.no, it.colorId))}" alt="" onerror="this.style.visibility='hidden'"></div>
     <div class="meta"><span class="qline"><span class="qty">${it.qty}×</span><b>${esc(it.no)}</b></span><span class="nm">${esc(it.name)}</span>
-      ${it.colorId ? `<span class="col"><i style="background:#${esc(it.hex)}"></i>${esc(it.colorName)}</span>` : ""}
+      ${it.colorName ? `<span class="col"><i style="background:#${esc(it.hex)}"></i>${esc(it.colorName)}</span>` : ""}
       ${it.fig ? `<span class="fig">Minifig: ${esc(it.fig)}</span>` : ""}
       ${lot ? `<span class="fig">Set ${esc(it.src)}</span>` : ""}
       ${px ? `<span class="px">${px}</span>` : ""}
@@ -664,12 +666,12 @@ function reportHTML(rec) {
   ${unchecked ? `<p class="sub">${unchecked} line${unchecked === 1 ? "" : "s"} not yet checked.</p>` : ""}
   ${rec.notes ? `<p>${esc(rec.notes).replace(/\n/g, "<br>")}</p>` : ""}
   ${miss.length ? `<div class="tablewrap"><table class="rep">
-    <thead><tr><th>Image</th><th>Part #</th><th>Description</th><th>Color</th>${lot ? "<th>Set</th>" : ""}<th class="num">Missing</th>${isBL(rec) ? `<th class="num">Used ea.</th><th class="num">New ea.</th>` : ""}</tr></thead>
+    <thead><tr><th>Image</th><th>Part #</th><th>Description</th>${lot ? "<th>Set</th>" : ""}<th class="num">Missing</th>${isBL(rec) ? `<th class="num">Used ea.</th><th class="num">New ea.</th>` : ""}</tr></thead>
     <tbody>${miss.map(i => `<tr>
       <td><img class="${darkClass(i.hex)}" src="${esc(i.img || imgURL(i.type, i.no, i.colorId))}" alt="" onerror="this.style.visibility='hidden'"></td>
-      <td><b>${esc(i.no)}</b></td>
+      <td><b>${esc(i.no)}</b>${i.colorName ? `<br><span class="col"><i style="background:#${esc(i.hex)}"></i>${esc(i.colorName)}</span>` : ""}</td>
       <td>${esc(i.name)}${i.fig ? `<br><span class="fig">Minifig: ${esc(i.fig)}</span>` : ""}</td>
-      <td>${esc(i.colorName)}</td>${lot ? `<td>${esc(i.src)}</td>` : ""}
+      ${lot ? `<td>${esc(i.src)}</td>` : ""}
       <td class="num big">${i.miss}${i.miss !== i.qty ? ` <span class="sub" style="font-size:13px;font-weight:400">of ${i.qty}</span>` : ""}</td>
       ${isBL(rec) ? `<td class="num">${money(i.pU)}</td><td class="num">${money(i.pN)}</td>` : ""}</tr>`).join("")}
     </tbody></table></div>` : `<p class="sub">Nothing marked missing.</p>`}`;
