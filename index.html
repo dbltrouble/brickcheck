@@ -10,7 +10,7 @@
 <title>BrickCheck</title>
 <style>
 :root{
-  --pic:104px;
+  --pic:112px;
   --bg:#eef0f3; --surface:#ffffff; --ink:#15181e; --muted:#5d6572; --line:#d6dae1;
   --accent:#0b5fd6; --accent-ink:#ffffff; --ok:#1d8a4a; --ok-bg:#e3f4ea; --bad:#cf2f2a; --bad-bg:#fbe7e6;
   box-sizing:border-box;
@@ -78,7 +78,13 @@ textarea{min-height:70px;resize:vertical}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface)}
 .seg button{border:0;background:none;min-height:38px;padding:0 12px}
 .seg button.on{background:var(--accent);color:var(--accent-ink);font-weight:600}
-select.mini{width:auto;min-height:38px;padding:4px 8px}
+select.mini{width:auto;min-height:38px;padding:4px 12px}
+.sorts{display:flex;flex-direction:column;align-items:flex-start;gap:8px}
+.sorts select:not(:first-child){margin-left:28px}
+@media (min-width:700px){
+  .sorts{flex-direction:row;flex-wrap:wrap;align-items:center}
+  .sorts select:not(:first-child){margin-left:0}
+}
 .chips{display:flex;gap:6px;overflow-x:auto;padding:2px 0 6px;-webkit-overflow-scrolling:touch}
 .chip{flex:none;display:inline-flex;align-items:center;gap:6px;min-height:38px;padding:0 12px;border-radius:99px;border:1px solid var(--line);background:var(--surface);white-space:nowrap;font-size:14px}
 .chip i{width:14px;height:14px;border-radius:50%;border:1px solid var(--line);flex:none}
@@ -88,9 +94,9 @@ select.mini{width:auto;min-height:38px;padding:4px 8px}
 .chip.clear span{color:var(--ok)}
 /* items */
 #list{zoom:var(--z,1);container-type:inline-size}
-#list.list{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+#list.list{display:flex;flex-direction:column;gap:6px;margin-top:12px}
 #list.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:10px;margin-top:12px}
-.item{display:grid;grid-template-columns:var(--pic) minmax(0,1fr) 112px;gap:10px;align-items:center;padding:8px;background:var(--surface);border:2px solid var(--line);border-radius:12px}
+.item{display:grid;grid-template-columns:var(--pic) minmax(0,1fr) 112px;gap:10px;align-items:center;padding:5px 8px;background:var(--surface);border:2px solid var(--line);border-radius:12px}
 .item.st-ok{border-color:var(--ok);background:var(--ok-bg)}
 .item.st-bad{border-color:var(--bad);background:var(--bad-bg)}
 .pic{width:var(--pic);height:var(--pic);flex:none;background:#fff;border-radius:8px;overflow:hidden}
@@ -107,12 +113,12 @@ select.mini{width:auto;min-height:38px;padding:4px 8px}
 .fig,.px{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .missnote{font-weight:700;color:var(--bad);font-size:13px}
 .acts{display:flex;flex-direction:column;gap:6px}
-.cmp{min-height:66px;border-radius:10px;border:2px solid var(--ok);background:var(--surface);color:var(--ok);font-weight:700;font-size:18px}
+.cmp{min-height:72px;border-radius:10px;border:2px solid var(--ok);background:var(--surface);color:var(--ok);font-weight:700;font-size:18px}
 .cmp.on{background:#1d8a4a;border-color:#1d8a4a;color:#fff}
 .mrow{display:flex;gap:6px}
-.mis{flex:1;min-height:32px;border-radius:9px;border:1px solid var(--bad);background:var(--surface);color:var(--bad);font-weight:600;font-size:13px}
+.mis{flex:1;min-height:34px;border-radius:9px;border:1px solid var(--bad);background:var(--surface);color:var(--bad);font-weight:600;font-size:13px}
 .mis.on{background:#cf2f2a;border-color:#cf2f2a;color:#fff}
-.dec{width:36px;min-height:32px;border-radius:9px;border:1px solid var(--line);background:var(--surface);font-size:20px;font-weight:700;flex:none}
+.dec{width:36px;min-height:34px;border-radius:9px;border:1px solid var(--line);background:var(--surface);font-size:20px;font-weight:700;flex:none}
 #list.grid .item{display:flex;flex-direction:column;align-items:stretch}
 #list.grid .pic{width:100%;height:auto;aspect-ratio:1;flex:none}
 #list.grid .meta{flex:1 1 auto}
@@ -184,7 +190,7 @@ prefs.sort = (Array.isArray(prefs.sort) ? prefs.sort : [])
   .filter(v => SORTS.some(s => s[0] === v.split(":")[0]));
 if (!prefs.sort.length) prefs.sort = ["color:asc", "name:asc"];
 
-const FAMS = ["Red", "Orange", "Yellow", "Green", "Blue", "Purple", "Pink", "Brown", "Gray", "Black", "White", "Trans", "Other"];
+const FAMS = ["Black", "Blue", "Brown", "Gray", "Green", "Orange", "Pink", "Purple", "Red", "Trans", "White", "Yellow", "Other"];
 const FAM_HEX = { Red: "c91a09", Orange: "fe8a18", Yellow: "f2cd37", Green: "237841", Blue: "0055bf", Purple: "81007b", Pink: "fc97ac", Brown: "582a12", Gray: "9ba19d", Black: "05131d", White: "f2f3f2", Trans: "bfe3f0", Other: "b0b0b0" };
 const famCache = {};
 function famsOf(name) {
@@ -629,8 +635,8 @@ function invHTML(rec) {
       ${selectHTML("src", [["all", "Set and minifig parts"], ["set", "Set parts only"], ["fig", "Minifig parts only"]], prefs.src, "Part source")}
       ${lot ? selectHTML("setf", [["all", "All sets in lot"], ...rec.sets.map(s => [s.num, "Set " + s.num])], ui.setf, "Set") : ""}
     </div>
-    <div class="row" id="sorts" style="gap:8px">${sortSelects()}</div>
-    <div class="row" style="gap:10px"><span style="font-weight:600">Zoom</span>${zoomHTML()}</div>
+    <div class="sorts" id="sorts">${sortSelects()}</div>
+    <div class="row" style="gap:10px"><span style="padding-left:13px">Zoom</span>${zoomHTML()}</div>
     <div id="chipwrap">${chipsHTML(rec)}</div>
   </div>
   <div id="list" class="${viewMode()}">${listHTML(rec)}</div>
@@ -720,7 +726,7 @@ function reportHTML(rec) {
   return `
   <div class="row noprint" style="margin-bottom:8px">
     <button class="btn small" data-act="back">← Inventory</button>
-    <span class="row" id="sorts" style="gap:8px">${sortSelects()}</span>
+    <div class="sorts" id="sorts">${sortSelects()}</div>
     <span class="grow"></span>
     <button class="btn small" data-act="wanted">${isBL(rec) ? "Copy BrickLink wanted list" : "Copy Rebrickable parts list"}</button>
     <button class="btn small primary" data-act="print">Print</button>
