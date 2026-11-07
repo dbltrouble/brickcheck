@@ -19,11 +19,13 @@
   :root:not([data-theme="light"]){
     --bg:#101318; --surface:#1a1e26; --ink:#eef0f4; --muted:#9aa3b2; --line:#2e3440;
     --accent:#5b9bff; --accent-ink:#06142b; --ok:#4cc27e; --ok-bg:#15301f; --bad:#ff6b66; --bad-bg:#3a1a19;
+    --qty:#ffffff;
   }
 }
 :root[data-theme="dark"]{
   --bg:#101318; --surface:#1a1e26; --ink:#eef0f4; --muted:#9aa3b2; --line:#2e3440;
   --accent:#5b9bff; --accent-ink:#06142b; --ok:#4cc27e; --ok-bg:#15301f; --bad:#ff6b66; --bad-bg:#3a1a19;
+  --qty:#ffffff;
   color-scheme:dark;
 }
 :root[data-theme="light"]{color-scheme:light}
@@ -53,7 +55,9 @@ textarea{min-height:70px;resize:vertical}
 .okmsg{color:var(--ok);margin:8px 0 0}
 .chip-s{min-height:32px;padding:0 10px;border-radius:99px;border:1px solid var(--line);background:var(--surface);font-size:13px;color:var(--muted);white-space:nowrap;flex:none}
 .chip-s.ok{color:var(--ok)} .chip-s.error{color:var(--bad)}
-.setrow{display:flex;gap:12px;align-items:center;padding:10px;border-radius:12px;background:var(--surface);border:1px solid var(--line);margin-bottom:8px;width:100%;text-align:left}
+.setwrap{display:flex;align-items:stretch;border-radius:12px;background:var(--surface);border:1px solid var(--line);margin-bottom:8px;overflow:hidden}
+.setrow{display:flex;gap:12px;align-items:center;padding:10px;border:0;background:none;flex:1 1 auto;min-width:0;text-align:left}
+.setdel{border:0;border-left:1px solid var(--line);background:none;color:var(--bad);font-size:14px;font-weight:600;padding:0 14px;flex:none}
 .setrow img{width:64px;height:64px;object-fit:contain;background:#fff;border-radius:8px;flex:none}
 .setrow .t{font-weight:650}
 .bar{height:6px;border-radius:3px;background:var(--line);overflow:hidden;margin-top:6px}
@@ -64,6 +68,9 @@ textarea{min-height:70px;resize:vertical}
 .top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);margin:0 -14px;padding:8px 14px;border-bottom:1px solid var(--line)}
 .ttl{font-size:18px;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pstat{color:var(--muted);font-size:13px;margin-top:4px}
+.hlabel{display:block;border:0;background:none;padding:4px 0 0;text-align:left;font-size:15px;color:var(--ink);max-width:100%}
+.hlabel span,.hlabel.empty{color:var(--accent);font-weight:600}
+.hlabel span{margin-left:6px;font-size:13px}
 .controls{display:flex;flex-direction:column;gap:8px;margin-top:10px}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface)}
 .seg button{border:0;background:none;min-height:38px;padding:0 12px}
@@ -76,14 +83,18 @@ select.mini{width:auto;min-height:38px;padding:4px 8px}
 .chip.on{border:2px solid var(--accent);font-weight:600}
 .chip.clear span{color:var(--ok)}
 /* items */
+#list{zoom:var(--z,1);container-type:inline-size}
 #list.list{display:flex;flex-direction:column;gap:8px;margin-top:12px}
 #list.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:10px;margin-top:12px}
-.item{display:grid;grid-template-columns:76px minmax(0,1fr) 118px;gap:10px;align-items:center;padding:8px;background:var(--surface);border:2px solid var(--line);border-radius:12px}
+.item{display:grid;grid-template-columns:98px minmax(0,1fr) 112px;gap:10px;align-items:center;padding:8px;background:var(--surface);border:2px solid var(--line);border-radius:12px}
 .item.st-ok{border-color:var(--ok);background:var(--ok-bg)}
 .item.st-bad{border-color:var(--bad);background:var(--bad-bg)}
-.pic{position:relative;width:76px;height:76px;background:#fff;border-radius:8px;overflow:hidden}
+.pic{width:98px;height:98px;background:#fff;border-radius:8px;overflow:hidden}
 .pic img{display:block;width:100%;height:100%;object-fit:contain}
-.qty{position:absolute;left:3px;top:3px;background:#15181e;color:#fff;font-weight:700;border-radius:7px;padding:0 7px;font-size:15px}
+.pic img.dk1{filter:brightness(1.45)}
+.pic img.dk2{filter:brightness(1.9)}
+.qline{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.qty{font-size:19px;font-weight:800;color:var(--qty,#15181e)}
 .meta{display:flex;flex-direction:column;gap:1px;min-width:0}
 .meta b{font-size:16px}
 .nm{font-size:13px;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
@@ -100,11 +111,22 @@ select.mini{width:auto;min-height:38px;padding:4px 8px}
 .dec{width:40px;min-height:38px;border-radius:9px;border:1px solid var(--line);background:var(--surface);font-size:20px;font-weight:700;flex:none}
 #list.grid .item{grid-template-columns:1fr;align-items:stretch}
 #list.grid .pic{width:100%;height:auto;aspect-ratio:1}
+#list.grid .acts{flex-direction:column}
+.zoom{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface)}
+.zoom button{border:0;background:none;min-height:38px;min-width:42px;font-weight:700}
+.zoom span{min-width:48px;text-align:center;font-size:14px;color:var(--muted)}
+@container (max-width:340px){
+  #list.list .item{grid-template-columns:98px minmax(0,1fr)}
+  #list.list .acts{grid-column:1 / -1;flex-direction:row}
+  #list.list .cmp{flex:3}
+  #list.list .mrow{flex:2}
+}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#15181e;color:#fff;padding:10px 16px;border-radius:10px;z-index:60;max-width:90%}
 /* report */
 table.rep{width:100%;border-collapse:collapse;background:var(--surface)}
 table.rep th,table.rep td{border-bottom:1px solid var(--line);padding:8px;text-align:left;vertical-align:middle}
 table.rep img{width:60px;height:60px;object-fit:contain;background:#fff;display:block}
+table.rep img.dk1{filter:brightness(1.45)} table.rep img.dk2{filter:brightness(1.9)}
 .tablewrap{overflow-x:auto}
 .big{font-size:20px;font-weight:700}
 .num{text-align:right!important;white-space:nowrap}
@@ -132,7 +154,7 @@ const write = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); retu
 const nc = (a, b) => String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: "base" });
 
 let store = read(KEY, { inv: {}, deleted: {} }); store.inv = store.inv || {}; store.deleted = store.deleted || {};
-let prefs = Object.assign({ relay: "", appKey: "", source: "rb", theme: "auto", view: "auto", status: "all", src: "all", sort: ["color", "name"] }, read(PKEY, {}));
+let prefs = Object.assign({ relay: "", appKey: "", source: "rb", theme: "auto", zoom: 1, brighten: true, view: "auto", status: "all", src: "all", sort: ["color", "name"] }, read(PKEY, {}));
 let syncMeta = Object.assign({ since: 0, lastPush: 0 }, read(MKEY, {}));
 let colors = read(CKEY, null);
 let priceCache = read(PCKEY, {});
@@ -141,6 +163,15 @@ function applyTheme() {
   if (prefs.theme === "light" || prefs.theme === "dark") r.dataset.theme = prefs.theme; else delete r.dataset.theme;
 }
 applyTheme();
+const ZOOMS = [0.8, 0.9, 1, 1.15, 1.3, 1.5, 1.75, 2];
+function applyZoom() { document.documentElement.style.setProperty("--z", prefs.zoom || 1); }
+applyZoom();
+function darkClass(hex) {
+  if (!prefs.brighten || !hex) return "";
+  const n = parseInt(String(hex).slice(0, 6), 16); if (isNaN(n)) return "";
+  const L = (0.2126 * (n >> 16 & 255) + 0.7152 * (n >> 8 & 255) + 0.0722 * (n & 255)) / 255;
+  return L < 0.14 ? "dk2" : L < 0.32 ? "dk1" : "";
+}
 const SORTS = [["color", "Color"], ["name", "Name"], ["num", "Part #"], ["qty", "Quantity"], ["vu", "Used value"], ["vn", "New value"]];
 prefs.sort = (Array.isArray(prefs.sort) ? prefs.sort : []).filter(k => SORTS.some(s => s[0] === k));
 if (!prefs.sort.length) prefs.sort = ["color", "name"];
@@ -459,7 +490,7 @@ function homeHTML() {
   </div>
   <h2>Inventories</h2>
   ${recs.length ? recs.map(r => { const st = stats(r.items); return `
-    <button class="setrow" data-act="open" data-id="${esc(r.id)}">
+    <div class="setwrap"><button class="setrow" data-act="open" data-id="${esc(r.id)}">
       <img src="${esc(r.sets[0].img)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">
       <span class="grow"><span class="t">${esc(recTitle(r))}</span><br>
       ${r.label ? `<span style="font-size:14px">${esc(r.label)}</span><br>` : ""}
@@ -470,7 +501,7 @@ function homeHTML() {
         ${st.mp ? `<span class="pill miss">${st.mp} missing</span>` : ""}
         ${st.mp && st.vu ? `<span class="pill miss">${money(st.vu)} used</span>` : ""}
       </span>
-    </button>`; }).join("") : `<p class="sub">No inventories yet. Enter a set number above.</p>`}`;
+    </button><button class="setdel" data-act="delhome" data-id="${esc(r.id)}" aria-label="Delete inventory">Delete</button></div>`; }).join("") : `<p class="sub">No inventories yet. Enter a set number above.</p>`}`;
 }
 
 function settingsHTML() {
@@ -481,6 +512,8 @@ function settingsHTML() {
   <div class="card">
     <span class="seg">${[["auto", "Match device"], ["light", "Light"], ["dark", "Dark"]].map(([v, l]) => `<button data-act="theme" data-v="${v}" class="${prefs.theme === v ? "on" : ""}">${l}</button>`).join("")}</span>
     <p class="sub" style="margin:8px 0 0;font-size:14px">This setting is saved separately on each device.</p>
+    <div class="row" style="margin-top:12px"><button class="btn small ${prefs.brighten ? "primary" : ""}" data-act="brighten">${prefs.brighten ? "✓ " : ""}Brighten dark parts</button></div>
+    <p class="sub" style="margin:8px 0 0;font-size:14px">Lightens images of black, dark brown, and other dark parts so details are easier to see.</p>
   </div>
   <h2>Part data source</h2>
   <div class="card">
@@ -529,7 +562,7 @@ function invHTML(rec) {
       ${syncChip()}
       <button class="btn small primary" data-act="report">Report</button>
     </div>
-    ${rec.label ? `<div class="pstat" id="hlabel" style="color:var(--ink)">${esc(rec.label)}</div>` : ""}
+    <button class="hlabel ${rec.label ? "" : "empty"}" id="hlabel" data-act="editlabel">${rec.label ? esc(rec.label) + " <span>Edit</span>" : "+ Add description"}</button>
     <div class="bar"><i id="pbar" style="width:${st.pct}%"></i></div>
     <div class="pstat" id="pstat">${esc(progressText(rec))}</div>
   </div>
@@ -541,7 +574,7 @@ function invHTML(rec) {
       ${selectHTML("src", [["all", "Set and minifig parts"], ["set", "Set parts only"], ["fig", "Minifig parts only"]], prefs.src, "Part source")}
       ${lot ? selectHTML("setf", [["all", "All sets in lot"], ...rec.sets.map(s => [s.num, "Set " + s.num])], ui.setf, "Set") : ""}
     </div>
-    <div class="row" id="sorts">${sortSelects()}</div>
+    <div class="row"><span class="row" id="sorts" style="gap:8px">${sortSelects()}</span>${zoomHTML()}</div>
     <div class="chips" id="chips">${chipsHTML(rec)}</div>
   </div>
   <div id="list" class="${viewMode()}">${listHTML(rec)}</div>
@@ -561,6 +594,7 @@ function invHTML(rec) {
   </div>`;
 }
 
+const zoomHTML = () => `<span class="zoom" id="zoomctl" aria-label="Zoom"><button data-act="zoom" data-d="-1" aria-label="Smaller">A−</button><span>${Math.round((prefs.zoom || 1) * 100)}%</span><button data-act="zoom" data-d="1" aria-label="Larger">A+</button></span>`;
 function chipsHTML(rec) {
   const m = new Map();
   for (const i of baseItems(rec)) {
@@ -582,8 +616,8 @@ function itemHTML(it, rec) {
   const ok = it.done, bad = it.miss > 0, lot = rec.sets.length > 1;
   const px = !isBL(rec) ? "" : it.pT == null ? (ui.prices ? "Loading prices…" : "No prices yet") : `New ${money(it.pN)}, used ${money(it.pU)}`;
   return `<div class="item ${ok ? "st-ok" : ""} ${bad ? "st-bad" : ""}" data-id="${esc(it.id)}">
-    <div class="pic"><img loading="lazy" src="${esc(it.img || imgURL(it.type, it.no, it.colorId))}" alt="" onerror="this.style.visibility='hidden'"><span class="qty">${it.qty}×</span></div>
-    <div class="meta"><b>${esc(it.no)}</b><span class="nm">${esc(it.name)}</span>
+    <div class="pic"><img loading="lazy" class="${darkClass(it.hex)}" src="${esc(it.img || imgURL(it.type, it.no, it.colorId))}" alt="" onerror="this.style.visibility='hidden'"></div>
+    <div class="meta"><span class="qline"><span class="qty">${it.qty}×</span><b>${esc(it.no)}</b></span><span class="nm">${esc(it.name)}</span>
       ${it.colorId ? `<span class="col"><i style="background:#${esc(it.hex)}"></i>${esc(it.colorName)}</span>` : ""}
       ${it.fig ? `<span class="fig">Minifig: ${esc(it.fig)}</span>` : ""}
       ${lot ? `<span class="fig">Set ${esc(it.src)}</span>` : ""}
@@ -616,6 +650,7 @@ function reportHTML(rec) {
   return `
   <div class="row noprint" style="margin-bottom:8px">
     <button class="btn small" data-act="back">← Inventory</button>
+    <span class="row" id="sorts" style="gap:8px">${sortSelects()}</span>
     <span class="grow"></span>
     <button class="btn small" data-act="wanted">${isBL(rec) ? "Copy BrickLink wanted list" : "Copy Rebrickable parts list"}</button>
     <button class="btn small primary" data-act="print">Print</button>
@@ -631,7 +666,7 @@ function reportHTML(rec) {
   ${miss.length ? `<div class="tablewrap"><table class="rep">
     <thead><tr><th>Image</th><th>Part #</th><th>Description</th><th>Color</th>${lot ? "<th>Set</th>" : ""}<th class="num">Missing</th>${isBL(rec) ? `<th class="num">Used ea.</th><th class="num">New ea.</th>` : ""}</tr></thead>
     <tbody>${miss.map(i => `<tr>
-      <td><img src="${esc(i.img || imgURL(i.type, i.no, i.colorId))}" alt="" onerror="this.style.visibility='hidden'"></td>
+      <td><img class="${darkClass(i.hex)}" src="${esc(i.img || imgURL(i.type, i.no, i.colorId))}" alt="" onerror="this.style.visibility='hidden'"></td>
       <td><b>${esc(i.no)}</b></td>
       <td>${esc(i.name)}${i.fig ? `<br><span class="fig">Minifig: ${esc(i.fig)}</span>` : ""}</td>
       <td>${esc(i.colorName)}</td>${lot ? `<td>${esc(i.src)}</td>` : ""}
@@ -676,6 +711,21 @@ document.addEventListener("click", async e => {
     case "finish": rec.status = rec.status === "complete" ? "progress" : "complete"; touch(rec); render(true); toast(rec.status === "complete" ? "Inventory marked complete" : "Inventory reopened"); break;
     case "reprice": if (!relayOn()) toast("Connect the relay in Settings first."); else if (ui.prices) toast("Prices are already loading."); else loadPrices(rec.id, true); break;
     case "reset": if (confirm("Clear every Complete and Missing mark for this inventory?")) { const t = Date.now(); rec.items.forEach(i => { i.done = false; i.miss = 0; i.t = t; }); rec.status = "progress"; touch(rec); render(true); } break;
+    case "editlabel": {
+      const v = prompt("Description for this inventory (for example, Purchased on eBay 11/7/26):", rec.label || "");
+      if (v === null) break;
+      rec.label = v.trim(); touch(rec);
+      const h = $("#hlabel"); if (h) { h.className = "hlabel" + (rec.label ? "" : " empty"); h.innerHTML = rec.label ? esc(rec.label) + " <span>Edit</span>" : "+ Add description"; }
+      const f = $("#reclabel"); if (f) f.value = rec.label;
+      break;
+    }
+    case "delhome": {
+      const r = store.inv[el.dataset.id]; if (!r) break;
+      if (confirm(`Delete "${recTitle(r)}${r.label ? " – " + r.label : ""}" on all your devices? This cannot be undone.`)) {
+        store.deleted[r.id] = Date.now(); delete store.inv[r.id]; persist(); scheduleSync(); render(true);
+      }
+      break;
+    }
     case "delete": if (confirm("Delete this inventory on all your devices? This cannot be undone.")) { store.deleted[rec.id] = Date.now(); delete store.inv[rec.id]; persist(); scheduleSync(); ui.rec = null; ui.screen = "home"; render(); } break;
     case "addlot": {
       const v = $("#lotnum").value; if (!v.trim() || ui.busy) return;
@@ -704,6 +754,13 @@ document.addEventListener("click", async e => {
     }
     case "syncnow": doSync(); break;
     case "source": prefs.source = el.dataset.v; savePrefs(); ui.setMsg = ""; render(true); break;
+    case "zoom": {
+      let i = ZOOMS.indexOf(prefs.zoom || 1); if (i < 0) i = 2;
+      i = Math.max(0, Math.min(ZOOMS.length - 1, i + Number(el.dataset.d)));
+      prefs.zoom = ZOOMS[i]; savePrefs(); applyZoom();
+      document.querySelectorAll("#zoomctl").forEach(z => z.outerHTML = zoomHTML()); break;
+    }
+    case "brighten": prefs.brighten = !prefs.brighten; savePrefs(); render(true); break;
     case "theme": prefs.theme = el.dataset.v; savePrefs(); applyTheme(); render(true); break;
     case "export": {
       const blob = new Blob([JSON.stringify({ app: "brickcheck", version: 2, exported: Date.now(), store })], { type: "application/json" });
@@ -735,7 +792,8 @@ document.addEventListener("change", e => {
   else if (t.id === "setf") { ui.setf = t.value; renderChips(); renderList(); }
   else if (/^sort\d$/.test(t.id)) {
     const i = +t.id.slice(4); prefs.sort = prefs.sort.slice(0, i); if (t.value) prefs.sort.push(t.value);
-    savePrefs(); $("#sorts").innerHTML = sortSelects(); renderList();
+    savePrefs();
+    if (ui.screen === "report") render(true); else { $("#sorts").innerHTML = sortSelects(); renderList(); }
   }
   else if (t.id === "importfile" && t.files[0]) {
     const r = new FileReader();
@@ -754,7 +812,7 @@ document.addEventListener("change", e => {
 let qTimer, noteTimer;
 document.addEventListener("input", e => {
   if (e.target.id === "q") { ui.q = e.target.value; clearTimeout(qTimer); qTimer = setTimeout(renderList, 150); }
-  else if (e.target.id === "reclabel") { const rec = store.inv[ui.rec]; rec.label = e.target.value; const h = $("#hlabel"); if (h) h.textContent = rec.label; clearTimeout(noteTimer); noteTimer = setTimeout(() => touch(rec), 500); }
+  else if (e.target.id === "reclabel") { const rec = store.inv[ui.rec]; rec.label = e.target.value; const h = $("#hlabel"); if (h) { h.className = "hlabel" + (rec.label ? "" : " empty"); h.innerHTML = rec.label ? esc(rec.label) + " <span>Edit</span>" : "+ Add description"; } clearTimeout(noteTimer); noteTimer = setTimeout(() => touch(rec), 500); }
   else if (e.target.id === "notes") { const rec = store.inv[ui.rec]; rec.notes = e.target.value; rec.notesT = Date.now(); clearTimeout(noteTimer); noteTimer = setTimeout(() => touch(rec), 500); }
 });
 document.addEventListener("keydown", e => {
