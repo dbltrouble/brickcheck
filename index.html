@@ -113,9 +113,11 @@ select.mini{width:auto;min-height:38px;padding:4px 8px}
 .mis{flex:1;min-height:32px;border-radius:9px;border:1px solid var(--bad);background:var(--surface);color:var(--bad);font-weight:600;font-size:13px}
 .mis.on{background:#cf2f2a;border-color:#cf2f2a;color:#fff}
 .dec{width:36px;min-height:32px;border-radius:9px;border:1px solid var(--line);background:var(--surface);font-size:20px;font-weight:700;flex:none}
-#list.grid .item{grid-template-columns:1fr;align-items:stretch}
-#list.grid .pic{width:100%;height:auto;aspect-ratio:1}
-#list.grid .acts{flex-direction:column}
+#list.grid .item{display:flex;flex-direction:column;align-items:stretch}
+#list.grid .pic{width:100%;height:auto;aspect-ratio:1;flex:none}
+#list.grid .meta{flex:1 1 auto}
+#list.grid .nm{min-height:2.8em}
+#list.grid .acts{flex:none;margin-top:auto;flex-direction:column}
 .zoom{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface)}
 .zoom button{border:0;background:none;min-height:38px;min-width:42px;font-weight:700}
 .zoom span{min-width:48px;text-align:center;font-size:14px;color:var(--muted)}
@@ -176,7 +178,7 @@ function darkClass(hex) {
   const L = (0.2126 * (n >> 16 & 255) + 0.7152 * (n >> 8 & 255) + 0.0722 * (n & 255)) / 255;
   return L < 0.14 ? "dk2" : L < 0.32 ? "dk1" : "";
 }
-const SORTS = [["color", "Color"], ["name", "Name"], ["num", "Part #"], ["qty", "Quantity"], ["vu", "Used value"], ["vn", "New value"]];
+const SORTS = [["color", "Color"], ["name", "Name"], ["num", "Part #"], ["qty", "Quantity"], ["vu", "Used Value"], ["vn", "New Value"]];
 prefs.sort = (Array.isArray(prefs.sort) ? prefs.sort : [])
   .map(v => v.includes(":") ? v : v + (["qty", "vu", "vn"].includes(v) ? ":desc" : ":asc"))
   .filter(v => SORTS.some(s => s[0] === v.split(":")[0]));
@@ -594,7 +596,7 @@ function sortSelects() {
     for (const [k, l] of SORTS) {
       if ((k === "vu" || k === "vn") && !bl) continue;
       if (used.includes(k)) continue;
-      for (const d of ["asc", "desc"]) opts.push([k + ":" + d, (i ? "then " : "Sort: ") + l.toLowerCase() + (d === "asc" ? " (up)" : " (down)")]);
+      for (const d of ["asc", "desc"]) opts.push([k + ":" + d, (i ? "then " : "Sort: ") + l + (d === "asc" ? " (up)" : " (down)")]);
     }
     return `<select class="mini" id="sort${i}" aria-label="${i ? "Then sort by" : "Sort by"}">
       ${allowNone ? `<option value="">then…</option>` : ""}
@@ -627,7 +629,8 @@ function invHTML(rec) {
       ${selectHTML("src", [["all", "Set and minifig parts"], ["set", "Set parts only"], ["fig", "Minifig parts only"]], prefs.src, "Part source")}
       ${lot ? selectHTML("setf", [["all", "All sets in lot"], ...rec.sets.map(s => [s.num, "Set " + s.num])], ui.setf, "Set") : ""}
     </div>
-    <div class="row"><span class="row" id="sorts" style="gap:8px">${sortSelects()}</span>${zoomHTML()}</div>
+    <div class="row" id="sorts" style="gap:8px">${sortSelects()}</div>
+    <div class="row" style="gap:10px"><span style="font-weight:600">Zoom</span>${zoomHTML()}</div>
     <div id="chipwrap">${chipsHTML(rec)}</div>
   </div>
   <div id="list" class="${viewMode()}">${listHTML(rec)}</div>
