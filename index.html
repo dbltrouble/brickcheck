@@ -10,6 +10,7 @@
 <title>BrickCheck</title>
 <style>
 :root{
+  --pic:104px;
   --bg:#eef0f3; --surface:#ffffff; --ink:#15181e; --muted:#5d6572; --line:#d6dae1;
   --accent:#0b5fd6; --accent-ink:#ffffff; --ok:#1d8a4a; --ok-bg:#e3f4ea; --bad:#cf2f2a; --bad-bg:#fbe7e6;
   box-sizing:border-box;
@@ -57,7 +58,7 @@ textarea{min-height:70px;resize:vertical}
 .chip-s.ok{color:var(--ok)} .chip-s.error{color:var(--bad)}
 .setwrap{position:relative;border-radius:12px;background:var(--surface);border:1px solid var(--line);margin-bottom:8px}
 .setrow{display:flex;gap:12px;align-items:center;padding:10px 38px 10px 10px;border:0;background:none;width:100%;min-width:0;text-align:left}
-.setdel{position:absolute;top:2px;right:2px;width:34px;height:34px;border:0;background:none;color:var(--bad);opacity:.7;display:flex;align-items:center;justify-content:center;border-radius:8px}
+.setdel{position:absolute;top:50%;transform:translateY(-50%);right:2px;width:34px;height:34px;border:0;background:none;color:var(--bad);opacity:.7;display:flex;align-items:center;justify-content:center;border-radius:8px}
 .setdel:hover,.setdel:active{opacity:1}
 .setdel svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
 .setrow img{width:64px;height:64px;object-fit:contain;background:#fff;border-radius:8px;flex:none}
@@ -82,16 +83,17 @@ select.mini{width:auto;min-height:38px;padding:4px 8px}
 .chip{flex:none;display:inline-flex;align-items:center;gap:6px;min-height:38px;padding:0 12px;border-radius:99px;border:1px solid var(--line);background:var(--surface);white-space:nowrap;font-size:14px}
 .chip i{width:14px;height:14px;border-radius:50%;border:1px solid var(--line);flex:none}
 .chip span{color:var(--muted);font-size:12px;font-weight:700}
+.chips.sub2{padding-top:0}
 .chip.on{border:2px solid var(--accent);font-weight:600}
 .chip.clear span{color:var(--ok)}
 /* items */
 #list{zoom:var(--z,1);container-type:inline-size}
 #list.list{display:flex;flex-direction:column;gap:8px;margin-top:12px}
 #list.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:10px;margin-top:12px}
-.item{display:grid;grid-template-columns:98px minmax(0,1fr) 112px;gap:10px;align-items:center;padding:8px;background:var(--surface);border:2px solid var(--line);border-radius:12px}
+.item{display:grid;grid-template-columns:var(--pic) minmax(0,1fr) 112px;gap:10px;align-items:center;padding:8px;background:var(--surface);border:2px solid var(--line);border-radius:12px}
 .item.st-ok{border-color:var(--ok);background:var(--ok-bg)}
 .item.st-bad{border-color:var(--bad);background:var(--bad-bg)}
-.pic{width:98px;height:98px;background:#fff;border-radius:8px;overflow:hidden}
+.pic{width:var(--pic);height:var(--pic);flex:none;background:#fff;border-radius:8px;overflow:hidden}
 .pic img{display:block;width:100%;height:100%;object-fit:contain}
 .pic img.dk1{filter:brightness(1.45)}
 .pic img.dk2{filter:brightness(1.9)}
@@ -102,15 +104,15 @@ select.mini{width:auto;min-height:38px;padding:4px 8px}
 .nm{font-size:13px;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .col{font-size:13px;display:flex;align-items:center;gap:6px}
 .col i{width:12px;height:12px;border-radius:50%;border:1px solid var(--line);flex:none}
-.fig,.px{font-size:12px;color:var(--muted)}
+.fig,.px{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .missnote{font-weight:700;color:var(--bad);font-size:13px}
 .acts{display:flex;flex-direction:column;gap:6px}
-.cmp{min-height:54px;border-radius:10px;border:2px solid var(--ok);background:var(--surface);color:var(--ok);font-weight:700;font-size:16px}
+.cmp{min-height:66px;border-radius:10px;border:2px solid var(--ok);background:var(--surface);color:var(--ok);font-weight:700;font-size:18px}
 .cmp.on{background:#1d8a4a;border-color:#1d8a4a;color:#fff}
 .mrow{display:flex;gap:6px}
-.mis{flex:1;min-height:38px;border-radius:9px;border:1px solid var(--bad);background:var(--surface);color:var(--bad);font-weight:600;font-size:14px}
+.mis{flex:1;min-height:32px;border-radius:9px;border:1px solid var(--bad);background:var(--surface);color:var(--bad);font-weight:600;font-size:13px}
 .mis.on{background:#cf2f2a;border-color:#cf2f2a;color:#fff}
-.dec{width:40px;min-height:38px;border-radius:9px;border:1px solid var(--line);background:var(--surface);font-size:20px;font-weight:700;flex:none}
+.dec{width:36px;min-height:32px;border-radius:9px;border:1px solid var(--line);background:var(--surface);font-size:20px;font-weight:700;flex:none}
 #list.grid .item{grid-template-columns:1fr;align-items:stretch}
 #list.grid .pic{width:100%;height:auto;aspect-ratio:1}
 #list.grid .acts{flex-direction:column}
@@ -118,7 +120,7 @@ select.mini{width:auto;min-height:38px;padding:4px 8px}
 .zoom button{border:0;background:none;min-height:38px;min-width:42px;font-weight:700}
 .zoom span{min-width:48px;text-align:center;font-size:14px;color:var(--muted)}
 @container (max-width:340px){
-  #list.list .item{grid-template-columns:98px minmax(0,1fr)}
+  #list.list .item{grid-template-columns:var(--pic) minmax(0,1fr)}
   #list.list .acts{grid-column:1 / -1;flex-direction:row}
   #list.list .cmp{flex:3}
   #list.list .mrow{flex:2}
@@ -175,10 +177,35 @@ function darkClass(hex) {
   return L < 0.14 ? "dk2" : L < 0.32 ? "dk1" : "";
 }
 const SORTS = [["color", "Color"], ["name", "Name"], ["num", "Part #"], ["qty", "Quantity"], ["vu", "Used value"], ["vn", "New value"]];
-prefs.sort = (Array.isArray(prefs.sort) ? prefs.sort : []).filter(k => SORTS.some(s => s[0] === k));
-if (!prefs.sort.length) prefs.sort = ["color", "name"];
+prefs.sort = (Array.isArray(prefs.sort) ? prefs.sort : [])
+  .map(v => v.includes(":") ? v : v + (["qty", "vu", "vn"].includes(v) ? ":desc" : ":asc"))
+  .filter(v => SORTS.some(s => s[0] === v.split(":")[0]));
+if (!prefs.sort.length) prefs.sort = ["color:asc", "name:asc"];
 
-const ui = { screen: "home", rec: null, busy: false, error: "", lotErr: "", q: "", color: "all", setf: "all", prices: null, sync: "off", syncMsg: "", setMsg: "" };
+const FAMS = ["Red", "Orange", "Yellow", "Green", "Blue", "Purple", "Pink", "Brown", "Gray", "Black", "White", "Trans", "Other"];
+const FAM_HEX = { Red: "c91a09", Orange: "fe8a18", Yellow: "f2cd37", Green: "237841", Blue: "0055bf", Purple: "81007b", Pink: "fc97ac", Brown: "582a12", Gray: "9ba19d", Black: "05131d", White: "f2f3f2", Trans: "bfe3f0", Other: "b0b0b0" };
+const famCache = {};
+function famsOf(name) {
+  if (!name) return [];
+  if (famCache[name]) return famCache[name];
+  const n = name.toLowerCase().replace(/\b(reddish|bluish|yellowish|greenish|brownish|pinkish)\b/g, " ");
+  const f = [];
+  if (/trans/.test(n)) f.push("Trans");
+  if (/\bred\b|rust/.test(n)) f.push("Red");
+  if (/orange|copper/.test(n)) f.push("Orange");
+  if (/yellow|gold/.test(n)) f.push("Yellow");
+  if (/green|lime|olive/.test(n)) f.push("Green");
+  if (/blue|turquoise|azure|aqua/.test(n)) f.push("Blue");
+  if (/purple|violet|lavender|magenta/.test(n)) f.push("Purple");
+  if (/pink|salmon|coral|rose/.test(n)) f.push("Pink");
+  if (/brown|brass|bronze|\btan\b/.test(n)) f.push("Brown");
+  if (/gray|grey|silver|titanium|pewter/.test(n)) f.push("Gray");
+  if (/black/.test(n)) f.push("Black");
+  if (/white/.test(n)) f.push("White");
+  if (!f.length) f.push("Other");
+  return famCache[name] = f;
+}
+const ui = { screen: "home", rec: null, busy: false, error: "", lotErr: "", q: "", fam: "all", color: "all", setf: "all", prices: null, sync: "off", syncMsg: "", setMsg: "" };
 
 let saveWarned = false;
 function persist() { if (!write(KEY, store) && !saveWarned) { saveWarned = true; toast("Could not save on this device. Storage is full or blocked."); } }
@@ -446,14 +473,31 @@ function baseItems(rec) {
   if (prefs.src === "fig") a = a.filter(i => i.figNo); else if (prefs.src === "set") a = a.filter(i => !i.figNo);
   return a;
 }
-const pv = v => v == null ? -1 : v;
 const CMP = {
   color: (x, y) => nc(x.colorName, y.colorName), name: (x, y) => nc(x.name, y.name), num: (x, y) => nc(x.no, y.no),
-  qty: (x, y) => y.qty - x.qty, vu: (x, y) => pv(y.pU) - pv(x.pU), vn: (x, y) => pv(y.pN) - pv(x.pN)
+  qty: (x, y) => x.qty - y.qty
 };
-function sortItems(a) { const keys = prefs.sort.concat(["num", "color"]); return a.sort((x, y) => { for (const k of keys) { const c = CMP[k](x, y); if (c) return c; } return 0; }); }
+function sortItems(a) {
+  const keys = prefs.sort.concat(["num:asc", "color:asc"]);
+  return a.sort((x, y) => {
+    for (const sk of keys) {
+      const [k, d] = sk.split(":"), dir = d === "desc" ? -1 : 1;
+      if (k === "vu" || k === "vn") {
+        const f = k === "vu" ? "pU" : "pN", px = x[f], py = y[f];
+        if (px == null && py == null) continue;
+        if (px == null) return 1;
+        if (py == null) return -1;
+        if (px !== py) return (px - py) * dir;
+        continue;
+      }
+      const c = CMP[k](x, y); if (c) return c * dir;
+    }
+    return 0;
+  });
+}
 function visibleItems(rec) {
   let a = baseItems(rec);
+  if (ui.fam !== "all") a = a.filter(i => famsOf(i.colorName).includes(ui.fam));
   if (ui.color !== "all") a = a.filter(i => String(i.colorId) === ui.color);
   const st = prefs.status;
   if (st === "todo") a = a.filter(i => !i.done && !i.miss);
@@ -543,17 +587,24 @@ function settingsHTML() {
 }
 
 function sortSelects() {
-  const sel = (i, allowNone) => `<select class="mini" id="sort${i}" aria-label="${i ? "Then sort by" : "Sort by"}">
-    ${allowNone ? `<option value="">then…</option>` : ""}
-    ${SORTS.filter(([v]) => (v !== "vu" && v !== "vn") || !store.inv[ui.rec] || isBL(store.inv[ui.rec]))
-      .filter(([v]) => v === prefs.sort[i] || !prefs.sort.slice(0, i).includes(v))
-      .map(([v, l]) => `<option value="${v}" ${prefs.sort[i] === v ? "selected" : ""}>${i ? "then " + l.toLowerCase() : "Sort: " + l.toLowerCase()}</option>`).join("")}
-  </select>`;
+  const bl = !store.inv[ui.rec] || isBL(store.inv[ui.rec]);
+  const sel = (i, allowNone) => {
+    const used = prefs.sort.slice(0, i).map(v => v.split(":")[0]);
+    const opts = [];
+    for (const [k, l] of SORTS) {
+      if ((k === "vu" || k === "vn") && !bl) continue;
+      if (used.includes(k)) continue;
+      for (const d of ["asc", "desc"]) opts.push([k + ":" + d, (i ? "then " : "Sort: ") + l.toLowerCase() + (d === "asc" ? " (up)" : " (down)")]);
+    }
+    return `<select class="mini" id="sort${i}" aria-label="${i ? "Then sort by" : "Sort by"}">
+      ${allowNone ? `<option value="">then…</option>` : ""}
+      ${opts.map(([v, l]) => `<option value="${v}" ${prefs.sort[i] === v ? "selected" : ""}>${l}</option>`).join("")}
+    </select>`;
+  };
   let h = sel(0, false);
   for (let i = 1; i <= Math.min(prefs.sort.length, 3); i++) h += sel(i, true);
   return h;
 }
-
 function invHTML(rec) {
   const lot = rec.sets.length > 1, st = stats(rec.items);
   return `
@@ -577,7 +628,7 @@ function invHTML(rec) {
       ${lot ? selectHTML("setf", [["all", "All sets in lot"], ...rec.sets.map(s => [s.num, "Set " + s.num])], ui.setf, "Set") : ""}
     </div>
     <div class="row"><span class="row" id="sorts" style="gap:8px">${sortSelects()}</span>${zoomHTML()}</div>
-    <div class="chips" id="chips">${chipsHTML(rec)}</div>
+    <div id="chipwrap">${chipsHTML(rec)}</div>
   </div>
   <div id="list" class="${viewMode()}">${listHTML(rec)}</div>
   <div class="card noprint" style="margin-top:16px">
@@ -598,17 +649,26 @@ function invHTML(rec) {
 
 const zoomHTML = () => `<span class="zoom" id="zoomctl" aria-label="Zoom"><button data-act="zoom" data-d="-1" aria-label="Smaller">−</button><span>${Math.round((prefs.zoom || 1) * 100)}%</span><button data-act="zoom" data-d="1" aria-label="Larger">+</button></span>`;
 function chipsHTML(rec) {
+  const base = baseItems(rec), fm = new Map();
+  for (const i of base) for (const f of famsOf(i.colorName)) {
+    const e = fm.get(f) || { open: 0 }; if (!i.done && !i.miss) e.open++; fm.set(f, e);
+  }
+  if (ui.fam !== "all" && !fm.has(ui.fam)) { ui.fam = "all"; ui.color = "all"; }
+  let h = `<div class="chips" id="chips"><button class="chip ${ui.fam === "all" ? "on" : ""}" data-act="fam" data-c="all">All colors</button>` +
+    FAMS.filter(f => fm.has(f)).map(f => { const e = fm.get(f);
+      return `<button class="chip ${ui.fam === f ? "on" : ""} ${e.open ? "" : "clear"}" data-act="fam" data-c="${f}"><i style="background:#${FAM_HEX[f]}"></i>${f}<span>${e.open || "✓"}</span></button>`; }).join("") + `</div>`;
   const m = new Map();
-  for (const i of baseItems(rec)) {
-    const k = String(i.colorId);
-    const e = m.get(k) || { n: i.colorName || "No color", h: i.hex, open: 0 };
-    if (!i.done && !i.miss) e.open++;
-    m.set(k, e);
+  for (const i of base) {
+    if (ui.fam !== "all" && !famsOf(i.colorName).includes(ui.fam)) continue;
+    if (!i.colorName) continue;
+    const k = String(i.colorId), e = m.get(k) || { n: i.colorName, h: i.hex, open: 0 };
+    if (!i.done && !i.miss) e.open++; m.set(k, e);
   }
   if (ui.color !== "all" && !m.has(ui.color)) ui.color = "all";
-  const arr = [...m.entries()].sort((a, b) => nc(a[1].n, b[1].n));
-  return `<button class="chip ${ui.color === "all" ? "on" : ""}" data-act="color" data-c="all">All colors</button>` +
-    arr.map(([k, e]) => `<button class="chip ${ui.color === k ? "on" : ""} ${e.open ? "" : "clear"}" data-act="color" data-c="${esc(k)}"><i style="background:#${esc(e.h)}"></i>${esc(e.n)}<span>${e.open || "✓"}</span></button>`).join("");
+  h += `<div class="chips sub2" id="chips2"><button class="chip ${ui.color === "all" ? "on" : ""}" data-act="color" data-c="all">${ui.fam === "all" ? "All shades" : "All " + ui.fam}</button>` +
+    [...m.entries()].sort((a, b) => nc(a[1].n, b[1].n)).map(([k, e]) =>
+      `<button class="chip ${ui.color === k ? "on" : ""} ${e.open ? "" : "clear"}" data-act="color" data-c="${esc(k)}"><i style="background:#${esc(e.h)}"></i>${esc(e.n)}<span>${e.open || "✓"}</span></button>`).join("") + `</div>`;
+  return h;
 }
 function listHTML(rec) {
   const a = visibleItems(rec), lot = rec.sets.length > 1;
@@ -633,7 +693,12 @@ function itemHTML(it, rec) {
   </div>`;
 }
 function renderList() { const rec = store.inv[ui.rec], l = $("#list"); if (rec && l) { l.className = viewMode(); l.innerHTML = listHTML(rec); } }
-function renderChips() { const rec = store.inv[ui.rec], c = $("#chips"); if (rec && c) { const x = c.scrollLeft; c.innerHTML = chipsHTML(rec); c.scrollLeft = x; } }
+function renderChips() {
+  const rec = store.inv[ui.rec], w = $("#chipwrap"); if (!rec || !w) return;
+  const x1 = ($("#chips") || {}).scrollLeft || 0, x2 = ($("#chips2") || {}).scrollLeft || 0;
+  w.innerHTML = chipsHTML(rec);
+  if ($("#chips")) $("#chips").scrollLeft = x1; if ($("#chips2")) $("#chips2").scrollLeft = x2;
+}
 function updProgress() {
   const rec = store.inv[ui.rec]; if (!rec || ui.screen !== "inv") return;
   const b = $("#pbar"), p = $("#pstat"); if (!b || !p) return;
@@ -709,6 +774,7 @@ document.addEventListener("click", async e => {
     case "report": ui.screen = "report"; render(); break;
     case "print": window.print(); break;
     case "view": prefs.view = el.dataset.v; savePrefs(); render(true); break;
+    case "fam": ui.fam = el.dataset.c; renderChips(); renderList(); break;
     case "color": ui.color = el.dataset.c; renderChips(); renderList(); break;
     case "finish": rec.status = rec.status === "complete" ? "progress" : "complete"; touch(rec); render(true); toast(rec.status === "complete" ? "Inventory marked complete" : "Inventory reopened"); break;
     case "reprice": if (!relayOn()) toast("Connect the relay in Settings first."); else if (ui.prices) toast("Prices are already loading."); else loadPrices(rec.id, true); break;
@@ -786,14 +852,16 @@ document.addEventListener("click", async e => {
     }
   }
 });
-function openRec(id) { ui.rec = id; ui.screen = "inv"; ui.q = ""; ui.color = "all"; ui.setf = "all"; ui.lotErr = ""; render(); }
+function openRec(id) { ui.rec = id; ui.screen = "inv"; ui.q = ""; ui.fam = "all"; ui.color = "all"; ui.setf = "all"; ui.lotErr = ""; render(); }
 
 document.addEventListener("change", e => {
   const t = e.target;
   if (t.id === "status" || t.id === "src") { prefs[t.id] = t.value; savePrefs(); renderChips(); renderList(); }
   else if (t.id === "setf") { ui.setf = t.value; renderChips(); renderList(); }
   else if (/^sort\d$/.test(t.id)) {
-    const i = +t.id.slice(4); prefs.sort = prefs.sort.slice(0, i); if (t.value) prefs.sort.push(t.value);
+    const i = +t.id.slice(4);
+    if (!t.value) prefs.sort = prefs.sort.slice(0, i);
+    else { prefs.sort[i] = t.value; const k = t.value.split(":")[0]; prefs.sort = prefs.sort.filter((v, j) => j <= i || v.split(":")[0] !== k); }
     savePrefs();
     if (ui.screen === "report") render(true); else { $("#sorts").innerHTML = sortSelects(); renderList(); }
   }
