@@ -481,8 +481,11 @@ function baseItems(rec) {
   if (prefs.src === "fig") a = a.filter(i => i.figNo); else if (prefs.src === "set") a = a.filter(i => !i.figNo);
   return a;
 }
+const noColor = n => !n || /^\[?no color/i.test(n);
+const cname = n => String(n || "").replace(/^\[(.*)\]$/, "$1");
+const colorNameCmp = (a, b) => (noColor(a) !== noColor(b)) ? (noColor(a) ? 1 : -1) : nc(a, b);
 const CMP = {
-  color: (x, y) => nc(x.colorName, y.colorName), name: (x, y) => nc(x.name, y.name), num: (x, y) => nc(x.no, y.no),
+  color: (x, y) => colorNameCmp(x.colorName, y.colorName), name: (x, y) => nc(x.name, y.name), num: (x, y) => nc(x.no, y.no),
   qty: (x, y) => x.qty - y.qty
 };
 function sortItems(a) {
@@ -675,8 +678,8 @@ function chipsHTML(rec) {
   }
   if (ui.color !== "all" && !m.has(ui.color)) ui.color = "all";
   h += `<div class="chips sub2" id="chips2"><button class="chip ${ui.color === "all" ? "on" : ""}" data-act="color" data-c="all">${ui.fam === "all" ? "All shades" : "All " + ui.fam}</button>` +
-    [...m.entries()].sort((a, b) => nc(a[1].n, b[1].n)).map(([k, e]) =>
-      `<button class="chip ${ui.color === k ? "on" : ""} ${e.open ? "" : "clear"}" data-act="color" data-c="${esc(k)}"><i style="background:#${esc(e.h)}"></i>${esc(e.n)}<span>${e.open || "✓"}</span></button>`).join("") + `</div>`;
+    [...m.entries()].sort((a, b) => colorNameCmp(a[1].n, b[1].n)).map(([k, e]) =>
+      `<button class="chip ${ui.color === k ? "on" : ""} ${e.open ? "" : "clear"}" data-act="color" data-c="${esc(k)}"><i style="background:#${esc(e.h)}"></i>${esc(cname(e.n))}<span>${e.open || "✓"}</span></button>`).join("") + `</div>`;
   return h;
 }
 function listHTML(rec) {
@@ -689,7 +692,7 @@ function itemHTML(it, rec) {
   return `<div class="item ${ok ? "st-ok" : ""} ${bad ? "st-bad" : ""}" data-id="${esc(it.id)}">
     <div class="pic"><img loading="lazy" class="${darkClass(it.hex)}" src="${esc(it.img || imgURL(it.type, it.no, it.colorId))}" alt="" onerror="this.style.visibility='hidden'"></div>
     <div class="meta"><span class="qline"><span class="qty">${it.qty}×</span><b>${esc(it.no)}</b></span><span class="nm">${esc(it.name)}</span>
-      ${it.colorName ? `<span class="col"><i style="background:#${esc(it.hex)}"></i>${esc(it.colorName)}</span>` : ""}
+      ${it.colorName ? `<span class="col"><i style="background:#${esc(it.hex)}"></i>${esc(cname(it.colorName))}</span>` : ""}
       ${it.fig ? `<span class="fig">Minifig: ${esc(it.fig)}</span>` : ""}
       ${lot ? `<span class="fig">Set ${esc(it.src)}</span>` : ""}
       ${px ? `<span class="px">${px}</span>` : ""}
@@ -743,7 +746,7 @@ function reportHTML(rec) {
     <thead><tr><th>Image</th><th>Part #</th><th>Description</th>${lot ? "<th>Set</th>" : ""}<th class="num">Missing</th>${isBL(rec) ? `<th class="num">Used ea.</th><th class="num">New ea.</th>` : ""}</tr></thead>
     <tbody>${miss.map(i => `<tr>
       <td><img class="${darkClass(i.hex)}" src="${esc(i.img || imgURL(i.type, i.no, i.colorId))}" alt="" onerror="this.style.visibility='hidden'"></td>
-      <td><b>${esc(i.no)}</b>${i.colorName ? `<br><span class="col"><i style="background:#${esc(i.hex)}"></i>${esc(i.colorName)}</span>` : ""}</td>
+      <td><b>${esc(i.no)}</b>${i.colorName ? `<br><span class="col"><i style="background:#${esc(i.hex)}"></i>${esc(cname(i.colorName))}</span>` : ""}</td>
       <td>${esc(i.name)}${i.fig ? `<br><span class="fig">Minifig: ${esc(i.fig)}</span>` : ""}</td>
       ${lot ? `<td>${esc(i.src)}</td>` : ""}
       <td class="num big">${i.miss}${i.miss !== i.qty ? ` <span class="sub" style="font-size:13px;font-weight:400">of ${i.qty}</span>` : ""}</td>
