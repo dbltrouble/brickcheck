@@ -151,6 +151,29 @@ table.rep img{width:60px;height:60px;object-fit:contain;background:#fff;display:
 table.rep img.dk1{filter:brightness(1.45)} table.rep img.dk2{filter:brightness(1.9)}
 .tablewrap{overflow-x:auto}
 .big{font-size:20px;font-weight:700}
+:root{--rpic:112px}
+.rstats{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 16px;min-width:130px;display:flex;flex-direction:column}
+.stat b{font-size:26px;line-height:1.15}
+.stat span{font-size:13px;color:var(--muted)}
+.stat.bad{background:var(--st-bad-bg);border-color:var(--st-bad)}
+.rlist{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-top:6px}
+.rrow{display:grid;grid-template-columns:var(--rpic) minmax(0,1fr) 88px;gap:18px;align-items:center;padding:12px 18px;border-bottom:1px solid var(--line)}
+.rrow:last-child{border-bottom:0}
+.rpic{display:block;width:var(--rpic);height:var(--rpic);object-fit:contain;background:#fff;border-radius:10px}
+.rpic.dk1{filter:brightness(1.45)} .rpic.dk2{filter:brightness(1.9)}
+.rno{font-size:21px;font-weight:700;line-height:1.2}
+.rname{margin-top:3px}
+.rsub{font-size:13px;color:var(--muted);margin-top:2px}
+.rmiss{display:flex;flex-direction:column;align-items:center;gap:5px}
+.rbadge{min-width:58px;padding:2px 12px;border-radius:12px;background:var(--st-bad-bg);border:2px solid var(--st-bad);font-size:28px;font-weight:800;text-align:center;line-height:1.3}
+.rof{font-size:13px;color:var(--muted);white-space:nowrap}
+@media (max-width:520px){
+  :root{--rpic:88px}
+  .rrow{grid-template-columns:var(--rpic) minmax(0,1fr) 64px;gap:10px;padding:10px}
+  .rbadge{min-width:46px;font-size:22px;padding:2px 8px}
+  .rno{font-size:18px}
+}
 .num{text-align:right!important;white-space:nowrap}
 table.rep td.mc1{padding-right:6px}
 table.rep td.mc2{padding:8px 6px;text-align:center;color:var(--muted);font-size:14px}
@@ -160,7 +183,7 @@ table.rep td.mc3{padding-left:6px;font-size:17px}
   body::before,.noprint{display:none!important}
   body{background:#fff;color:#000}
   .wrap{padding:0;max-width:none}
-  table.rep tr{break-inside:avoid}
+  table.rep tr,.rrow{break-inside:avoid}
 }
 </style>
 </head>
@@ -179,7 +202,7 @@ const write = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); retu
 const nc = (a, b) => String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: "base" });
 
 let store = read(KEY, { inv: {}, deleted: {} }); store.inv = store.inv || {}; store.deleted = store.deleted || {};
-let prefs = Object.assign({ relay: "", appKey: "", source: "rb", theme: "auto", zoom: 1, brighten: true, view: "auto", status: "all", src: "all", sort: ["color", "name"] }, read(PKEY, {}));
+let prefs = Object.assign({ relay: "", appKey: "", source: "rb", theme: "auto", zoom: 1, brighten: true, stickers: false, view: "auto", status: "all", src: "all", sort: ["color", "name"] }, read(PKEY, {}));
 let syncMeta = Object.assign({ since: 0, lastPush: 0 }, read(MKEY, {}));
 let colors = read(CKEY, null);
 let priceCache = read(PCKEY, {});
@@ -197,6 +220,8 @@ function darkClass(hex) {
   const L = (0.2126 * (n >> 16 & 255) + 0.7152 * (n >> 8 & 255) + 0.0722 * (n & 255)) / 255;
   return L < 0.14 ? "dk2" : L < 0.32 ? "dk1" : "";
 }
+const isSticker = it => /^sticker\b/i.test(it.name || "");
+const liveItems = rec => prefs.stickers ? rec.items : rec.items.filter(i => !isSticker(i));
 const SORTS = [["color", "Color"], ["name", "Name"], ["num", "Part #"], ["qty", "Quantity"], ["vu", "Used Value"], ["vn", "New Value"]];
 prefs.sort = (Array.isArray(prefs.sort) ? prefs.sort : [])
   .map(v => v.includes(":") ? v : v + (["qty", "vu", "vn"].includes(v) ? ":desc" : ":asc"))
@@ -484,14 +509,14 @@ function stats(items) {
   return { lines: n, res, comp, mp, ml, vu, vn, unk, pct: n ? Math.round(res / n * 100) : 0, pctG: n ? comp / n * 100 : 0, pctR: n ? ml / n * 100 : 0 };
 }
 function progressText(rec) {
-  const st = stats(rec.items);
+  const st = stats(liveItems(rec));
   let t = `${st.res} of ${st.lines} elements checked, ${st.mp} piece${st.mp === 1 ? "" : "s"} missing`;
   if (st.mp && st.vu) t += ` (about ${money(st.vu)} used)`;
   if (ui.prices && ui.prices.recId === rec.id) t += `. Loading prices ${ui.prices.done} of ${ui.prices.total}`;
   return t;
 }
 function baseItems(rec) {
-  let a = rec.items;
+  let a = liveItems(rec);
   if (ui.setf !== "all") a = a.filter(i => i.src === ui.setf);
   if (prefs.src === "fig") a = a.filter(i => i.figNo); else if (prefs.src === "set") a = a.filter(i => !i.figNo);
   return a;
@@ -561,12 +586,12 @@ function homeHTML() {
     ${relayOn() ? "" : `<p class="sub" style="margin:8px 0 0">First, connect the relay in <a href="#" data-act="settings">Settings</a>.</p>`}
   </div>
   <h2>Inventories</h2>
-  ${recs.length ? recs.map(r => { const st = stats(r.items); return `
+  ${recs.length ? recs.map(r => { const st = stats(liveItems(r)); return `
     <div class="setwrap"><button class="setrow" data-act="open" data-id="${esc(r.id)}">
       <img src="${esc(r.sets[0].img)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">
       <span class="grow"><span class="t">${esc(recTitle(r))}</span><br>
       ${r.label ? `<span style="font-size:14px">${esc(r.label)}</span><br>` : ""}
-      <span class="sub" style="margin:0;font-size:13px">${r.sets.length > 1 ? r.sets.length + "-set lot, " : ""}${SRC_NAME[r.source || "bl"]}, ${r.items.length} elements, updated ${fmtDate(r.updated)}</span>
+      <span class="sub" style="margin:0;font-size:13px">${r.sets.length > 1 ? r.sets.length + "-set lot, " : ""}${SRC_NAME[r.source || "bl"]}, ${liveItems(r).length} elements, updated ${fmtDate(r.updated)}</span>
       <span class="bar"><i class="g" style="width:${st.pctG}%"></i><i class="r" style="width:${st.pctR}%"></i></span></span>
       <span style="text-align:right;flex:none;display:flex;flex-direction:column;gap:4px;align-items:flex-end">
         <span class="pill ${r.status === "complete" ? "done" : ""}">${r.status === "complete" ? "Finished" : st.pct + "%"}</span>
@@ -591,6 +616,11 @@ function settingsHTML() {
   <div class="card">
     <span class="seg">${[["rb", "Rebrickable"], ["bl", "BrickLink"]].map(([v, l]) => `<button data-act="source" data-v="${v}" class="${prefs.source === v ? "on" : ""}">${l}</button>`).join("")}</span>
     <p class="sub" style="margin:8px 0 0;font-size:14px">Applies to new inventories. Each inventory keeps the source it started with. Element values are only available from BrickLink.</p>
+  </div>
+  <h2>Sticker sheets</h2>
+  <div class="card">
+    <div class="row"><button class="btn small ${prefs.stickers ? "primary" : ""}" data-act="stickers">${prefs.stickers ? "✓ " : ""}Include sticker sheets in inventories</button></div>
+    <p class="sub" style="margin:8px 0 0;font-size:14px">When off, sticker sheets are hidden everywhere: element lists, counts, progress, and reports. Nothing is deleted, so turning this back on brings them back with any marks you made. This setting is saved separately on each device.</p>
   </div>
   <h2>Relay</h2>
   <div class="card">
@@ -632,7 +662,7 @@ function sortSelects() {
   return h;
 }
 function invHTML(rec) {
-  const lot = rec.sets.length > 1, st = stats(rec.items), listH = listHTML(rec);
+  const lot = rec.sets.length > 1, st = stats(liveItems(rec)), listH = listHTML(rec);
   return `
   <div class="top noprint">
     <div class="row nowrap">
@@ -648,15 +678,17 @@ function invHTML(rec) {
     <div class="row"><button class="btn small" data-act="resetfilters">Reset all filters</button></div>
     <input type="search" id="q" placeholder="Search part #, name, color, or minifig" value="${esc(ui.q)}" autocomplete="off" autocapitalize="off">
     <div class="row">
-      <span class="seg"><button data-act="view" data-v="grid" class="${viewMode() === "grid" ? "on" : ""}">Grid</button><button data-act="view" data-v="list" class="${viewMode() === "list" ? "on" : ""}">List</button></span>
       ${selectHTML("status", [["all", "All elements"], ["todo", "To check"], ["missing", "Missing"], ["done", "Complete"]], prefs.status, "Show")}
-      <button class="btn small" data-act="refresh">Refresh checked status</button>
+      <button class="btn small primary" data-act="refresh">Refresh checked status</button>
       ${selectHTML("src", [["all", "Set and minifig elements"], ["set", "Set elements only"], ["fig", "Minifig elements only"]], prefs.src, "Element source")}
       <span class="showing" id="showing">${showingText()}</span>
       ${lot ? selectHTML("setf", [["all", "All sets in lot"], ...rec.sets.map(s => [s.num, "Set " + s.num])], ui.setf, "Set") : ""}
     </div>
     <div class="sorts" id="sorts">${sortSelects()}</div>
-    <div class="row" style="gap:10px"><span style="padding-left:13px">Zoom</span>${zoomHTML()}</div>
+    <div class="row" style="gap:14px">
+      <span class="seg"><button data-act="view" data-v="grid" class="${viewMode() === "grid" ? "on" : ""}">Grid</button><button data-act="view" data-v="list" class="${viewMode() === "list" ? "on" : ""}">List</button></span>
+      <span class="row" style="gap:10px"><span>Zoom</span>${zoomHTML()}</span>
+    </div>
     <div id="chipwrap">${chipsHTML(rec)}</div>
   </div>
   <div id="list" class="${viewMode()}">${listH}</div>
@@ -705,7 +737,7 @@ function showingText() {
 }
 function listHTML(rec) {
   const a = visibleItems(rec), lot = rec.sets.length > 1;
-  ui.shown = { n: a.length, t: rec.items.length, p: a.reduce((sum, i) => sum + i.qty, 0) };
+  ui.shown = { n: a.length, t: liveItems(rec).length, p: a.reduce((sum, i) => sum + i.qty, 0) };
   return a.length ? a.map(i => itemHTML(i, rec)).join("") : `<p class="sub">No elements match.</p>`;
 }
 function itemHTML(it, rec) {
@@ -735,7 +767,7 @@ function renderChips() {
 function updProgress() {
   const rec = store.inv[ui.rec]; if (!rec || ui.screen !== "inv") return;
   const g = $("#pbarg"), r = $("#pbarr"), p = $("#pstat"); if (!g || !r || !p) return;
-  const st = stats(rec.items);
+  const st = stats(liveItems(rec));
   g.style.width = st.pctG + "%"; r.style.width = st.pctR + "%"; p.textContent = progressText(rec);
 }
 function refreshItem(it) {
@@ -745,9 +777,10 @@ function refreshItem(it) {
 }
 
 function reportHTML(rec) {
-  const lot = rec.sets.length > 1, st = stats(rec.items);
-  const miss = sortItems(rec.items.filter(i => i.miss > 0).slice());
+  const live = liveItems(rec), lot = rec.sets.length > 1, st = stats(live);
+  const miss = sortItems(live.filter(i => i.miss > 0).slice());
   const unchecked = st.lines - st.res;
+  const tile = (n, label, cls) => `<div class="stat ${cls || ""}"><b>${n}</b><span>${label}</span></div>`;
   return `
   <div class="row noprint" style="margin-bottom:8px">
     <button class="btn small" data-act="back">← Inventory</button>
@@ -756,24 +789,31 @@ function reportHTML(rec) {
     <button class="btn small" data-act="wanted">${isBL(rec) ? "Copy BrickLink wanted list" : "Copy list for Rebrickable"}</button>
     <button class="btn small primary" data-act="print">Print</button>
   </div>
-  <h1>Missing elements</h1>
-  ${rec.label ? `<p style="margin:2px 0 6px;font-weight:600">${esc(rec.label)}</p>` : ""}
+  <h1>Missing pieces</h1>
+  ${rec.label ? `<p style="margin:2px 0 6px;font-weight:600;font-size:18px">${esc(rec.label)}</p>` : ""}
   ${rec.sets.map(s => `<p style="margin:2px 0"><b>${esc(s.num)}</b>${(s.copies || 1) > 1 ? " ×" + s.copies + " copies," : ""} ${esc(s.name)}${s.year ? " (" + s.year + ")" : ""}</p>`).join("")}
   <p class="sub" style="margin-top:6px">Source: ${SRC_NAME[rec.source || "bl"]}. ${rec.status === "complete" ? "Inventory finished " + fmtDate(rec.updated) : "Inventory in progress, updated " + fmtDate(rec.updated)}</p>
-  <p class="big">${st.mp} piece${st.mp === 1 ? "" : "s"} missing across ${st.ml} element${st.ml === 1 ? "" : "s"}</p>
-  ${st.mp && isBL(rec) ? `<p>Cost to replace, at BrickLink 6-month averages: about <b>${money(st.vu)} used</b> or <b>${money(st.vn)} new</b>${st.unk ? ` (${st.unk} element${st.unk === 1 ? "" : "s"} without price data)` : ""}.</p>` : ""}
-  ${unchecked ? `<p class="sub">${unchecked} element${unchecked === 1 ? "" : "s"} not yet checked.</p>` : ""}
+  <div class="rstats">
+    ${tile(st.mp, "piece" + (st.mp === 1 ? "" : "s") + " missing", "bad")}
+    ${tile(st.ml, "element" + (st.ml === 1 ? "" : "s") + " affected")}
+    ${unchecked ? tile(unchecked, "element" + (unchecked === 1 ? "" : "s") + " not yet checked") : ""}
+    ${st.mp && isBL(rec) ? tile(money(st.vu), "to replace, used") + tile(money(st.vn), "to replace, new") : ""}
+  </div>
+  ${st.mp && isBL(rec) && st.unk ? `<p class="sub" style="margin-top:0">${st.unk} element${st.unk === 1 ? "" : "s"} without price data.</p>` : ""}
   ${rec.notes ? `<p>${esc(rec.notes).replace(/\n/g, "<br>")}</p>` : ""}
-  ${miss.length ? `<div class="tablewrap"><table class="rep">
-    <thead><tr><th>Image</th><th>Part #</th><th>Description</th>${lot ? "<th>Set</th>" : ""}<th class="num" colspan="3">Missing</th>${isBL(rec) ? `<th class="num">Used ea.</th><th class="num">New ea.</th>` : ""}</tr></thead>
-    <tbody>${miss.map(i => `<tr>
-      <td><img class="${darkClass(i.hex)}" src="${esc(i.img || imgURL(i.type, i.no, i.colorId))}" alt="" onerror="this.style.visibility='hidden'"></td>
-      <td><b>${esc(i.no)}</b>${i.colorName ? `<br><span class="col"><i style="background:#${esc(i.hex)}"></i>${esc(cname(i.colorName))}</span>` : ""}</td>
-      <td>${esc(i.name)}${i.fig ? `<br><span class="fig">Minifig: ${esc(i.fig)}</span>` : ""}</td>
-      ${lot ? `<td>${esc(i.src)}</td>` : ""}
-      <td class="num big mc1">${i.miss}</td><td class="mc2">of</td><td class="num mc3">${i.qty}</td>
-      ${isBL(rec) ? `<td class="num">${money(i.pU)}</td><td class="num">${money(i.pN)}</td>` : ""}</tr>`).join("")}
-    </tbody></table></div>` : `<p class="sub">Nothing marked missing.</p>`}`;
+  ${miss.length ? `<div class="rlist">${miss.map(i => `
+    <div class="rrow">
+      <img class="rpic ${darkClass(i.hex)}" src="${esc(i.img || imgURL(i.type, i.no, i.colorId))}" alt="" onerror="this.style.visibility='hidden'">
+      <div class="rinfo">
+        <div class="rno">${esc(i.no)}</div>
+        ${i.colorName ? `<div class="col"><i style="background:#${esc(i.hex)}"></i>${esc(cname(i.colorName))}</div>` : ""}
+        <div class="rname">${esc(i.name)}</div>
+        ${i.fig ? `<div class="rsub">Minifig: ${esc(i.fig)}</div>` : ""}
+        ${lot ? `<div class="rsub">Set ${esc(i.src)}</div>` : ""}
+        ${isBL(rec) ? `<div class="rsub">Used ${money(i.pU)} each · New ${money(i.pN)} each</div>` : ""}
+      </div>
+      <div class="rmiss"><span class="rbadge">${i.miss}</span><span class="rof">of ${i.qty}</span></div>
+    </div>`).join("")}</div>` : `<p class="sub">Nothing marked missing.</p>`}`;
 }
 
 /* ---------- events ---------- */
@@ -808,6 +848,7 @@ document.addEventListener("click", async e => {
     case "report": ui.screen = "report"; render(); break;
     case "print": window.print(); break;
     case "view": prefs.view = el.dataset.v; savePrefs(); render(true); break;
+    case "stickers": prefs.stickers = !prefs.stickers; savePrefs(); render(true); break;
     case "refresh": renderChips(); renderList(); break;
     case "resetfilters":
       ui.q = ""; ui.fam = "all"; ui.color = "all"; ui.setf = "all"; prefs.status = "all"; prefs.src = "all"; savePrefs(); render(true); break;
@@ -876,12 +917,12 @@ document.addEventListener("click", async e => {
     case "import": $("#importfile").click(); break;
     case "wanted": {
       if (!isBL(rec)) {
-        const csv = ["Part,Color,Quantity"].concat(rec.items.filter(i => i.miss > 0 && i.type === "PART").map(i => `${i.no},${i.colorId},${i.miss}`)).join("\n");
+        const csv = ["Part,Color,Quantity"].concat(liveItems(rec).filter(i => i.miss > 0 && i.type === "PART").map(i => `${i.no},${i.colorId},${i.miss}`)).join("\n");
         try { await navigator.clipboard.writeText(csv); toast("Copied. On Rebrickable, create a new list and import it."); }
         catch (err) { prompt("Copy this:", csv); }
         break;
       }
-      const xml = "<INVENTORY>" + rec.items.filter(i => i.miss > 0).map(i =>
+      const xml = "<INVENTORY>" + liveItems(rec).filter(i => i.miss > 0).map(i =>
         `<ITEM><ITEMTYPE>${TYPE_L[i.type] || "P"}</ITEMTYPE><ITEMID>${esc(i.no)}</ITEMID>${i.colorId ? `<COLOR>${i.colorId}</COLOR>` : ""}<MINQTY>${i.miss}</MINQTY></ITEM>`).join("") + "</INVENTORY>";
       try { await navigator.clipboard.writeText(xml); toast("Copied. On BrickLink, go to Wanted, then Upload, and paste it."); }
       catch (err) { prompt("Copy this:", xml); }
