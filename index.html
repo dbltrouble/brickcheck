@@ -13,6 +13,7 @@
   --pic:112px;
   --bg:#eef0f3; --surface:#ffffff; --ink:#15181e; --muted:#5d6572; --line:#d6dae1;
   --accent:#0b5fd6; --accent-ink:#ffffff; --ok:#1d8a4a; --ok-bg:#e3f4ea; --bad:#cf2f2a; --bad-bg:#fbe7e6;
+  --st-ok:#14a24a; --st-ok-bg:#c3eed1; --st-bad:#e0261f; --st-bad-bg:#fbc9c5; --swatch-line:#6b7280;
   box-sizing:border-box;
   padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
 }
@@ -20,12 +21,14 @@
   :root:not([data-theme="light"]){
     --bg:#101318; --surface:#1a1e26; --ink:#eef0f4; --muted:#9aa3b2; --line:#2e3440;
     --accent:#5b9bff; --accent-ink:#06142b; --ok:#4cc27e; --ok-bg:#15301f; --bad:#ff6b66; --bad-bg:#3a1a19;
+    --st-ok:#3ddc84; --st-ok-bg:#1b5130; --st-bad:#ff5a52; --st-bad-bg:#64201f; --swatch-line:#b4bccb;
     --qty:#ffffff;
   }
 }
 :root[data-theme="dark"]{
   --bg:#101318; --surface:#1a1e26; --ink:#eef0f4; --muted:#9aa3b2; --line:#2e3440;
   --accent:#5b9bff; --accent-ink:#06142b; --ok:#4cc27e; --ok-bg:#15301f; --bad:#ff6b66; --bad-bg:#3a1a19;
+    --st-ok:#3ddc84; --st-ok-bg:#1b5130; --st-bad:#ff5a52; --st-bad-bg:#64201f; --swatch-line:#b4bccb;
   --qty:#ffffff;
   color-scheme:dark;
 }
@@ -63,12 +66,18 @@ textarea{min-height:70px;resize:vertical}
 .setdel svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
 .setrow img{width:64px;height:64px;object-fit:contain;background:#fff;border-radius:8px;flex:none}
 .setrow .t{font-weight:650}
-.bar{height:6px;border-radius:3px;background:var(--line);overflow:hidden;margin-top:6px}
-.bar>i{display:block;height:100%;background:var(--ok)}
+.bar{display:flex;height:8px;border-radius:4px;background:var(--line);overflow:hidden;margin-top:6px}
+.bar>i{display:block;height:100%;flex:none}
+.bar>i.g{background:var(--st-ok)}
+.bar>i.r{background:var(--st-bad)}
 .pill{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;font-weight:600;background:var(--line);color:var(--muted);white-space:nowrap}
 .pill.done{background:var(--ok-bg);color:var(--ok)}
 .pill.miss{background:var(--bad-bg);color:var(--bad)}
 .top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);margin:0 -14px;padding:8px 14px;border-bottom:1px solid var(--line)}
+.titlebox{display:flex;align-items:center;gap:8px;min-width:0;flex:1 1 auto}
+.titlebox .ttl{flex:0 1 auto;min-width:0}
+.showing{color:var(--muted);font-size:14px}
+@media (max-width:520px){#reportbtn{max-width:96px;white-space:normal;line-height:1.15;padding:5px 10px;text-align:center}}
 .ttl{font-size:18px;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pstat{color:var(--muted);font-size:13px;margin-top:4px}
 .hlabel{display:block;border:0;background:none;padding:4px 0 0;text-align:left;font-size:15px;color:var(--ink);max-width:100%}
@@ -87,7 +96,7 @@ select.mini{width:auto;min-height:38px;padding:4px 12px}
 }
 .chips{display:flex;gap:6px;overflow-x:auto;padding:2px 0 6px;-webkit-overflow-scrolling:touch}
 .chip{flex:none;display:inline-flex;align-items:center;gap:6px;min-height:38px;padding:0 12px;border-radius:99px;border:1px solid var(--line);background:var(--surface);white-space:nowrap;font-size:14px}
-.chip i{width:14px;height:14px;border-radius:50%;border:1px solid var(--line);flex:none}
+.chip i{width:14px;height:14px;border-radius:50%;border:1.5px solid var(--swatch-line);flex:none}
 .chip span{color:var(--muted);font-size:12px;font-weight:700}
 .chips.sub2{padding-top:0}
 .chip.on{border:2px solid var(--accent);font-weight:600}
@@ -96,9 +105,9 @@ select.mini{width:auto;min-height:38px;padding:4px 12px}
 #list{zoom:var(--z,1);container-type:inline-size}
 #list.list{display:flex;flex-direction:column;gap:6px;margin-top:12px}
 #list.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:10px;margin-top:12px}
-.item{display:grid;grid-template-columns:var(--pic) minmax(0,1fr) 112px;gap:10px;align-items:center;padding:5px 8px;background:var(--surface);border:2px solid var(--line);border-radius:12px}
-.item.st-ok{border-color:var(--ok);background:var(--ok-bg)}
-.item.st-bad{border-color:var(--bad);background:var(--bad-bg)}
+.item{display:grid;grid-template-columns:var(--pic) minmax(0,1fr) 112px;gap:10px;align-items:center;padding:5px 8px;background:var(--surface);border:3px solid var(--line);border-radius:12px}
+.item.st-ok{border-color:var(--st-ok);background:var(--st-ok-bg)}
+.item.st-bad{border-color:var(--st-bad);background:var(--st-bad-bg)}
 .pic{width:var(--pic);height:var(--pic);flex:none;background:#fff;border-radius:8px;overflow:hidden}
 .pic img{display:block;width:100%;height:100%;object-fit:contain}
 .pic img.dk1{filter:brightness(1.45)}
@@ -109,7 +118,7 @@ select.mini{width:auto;min-height:38px;padding:4px 12px}
 .meta b{font-size:16px}
 .nm{font-size:13px;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .col{font-size:13px;display:flex;align-items:center;gap:6px}
-.col i{width:12px;height:12px;border-radius:50%;border:1px solid var(--line);flex:none}
+.col i{width:12px;height:12px;border-radius:50%;border:1.5px solid var(--swatch-line);flex:none}
 .fig,.px{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .missnote{font-weight:700;color:var(--bad);font-size:13px}
 .acts{display:flex;flex-direction:column;gap:6px}
@@ -147,7 +156,7 @@ table.rep td.mc1{padding-right:6px}
 table.rep td.mc2{padding:8px 6px;text-align:center;color:var(--muted);font-size:14px}
 table.rep td.mc3{padding-left:6px;font-size:17px}
 @media print{
-  :root{--bg:#fff;--surface:#fff;--ink:#000;--muted:#333;--line:#bbb}
+  :root{--bg:#fff;--surface:#fff;--ink:#000;--muted:#333;--line:#bbb;--swatch-line:#555}
   body::before,.noprint{display:none!important}
   body{background:#fff;color:#000}
   .wrap{padding:0;max-width:none}
@@ -465,12 +474,14 @@ function softRefresh() {
 
 /* ---------- stats / filters / sorting ---------- */
 function stats(items) {
-  let res = 0, mp = 0, ml = 0, vu = 0, vn = 0, unk = 0;
+  let res = 0, comp = 0, mp = 0, ml = 0, vu = 0, vn = 0, unk = 0;
   for (const i of items) {
     if (i.done || i.miss) res++;
+    if (i.done && !i.miss) comp++;
     if (i.miss) { mp += i.miss; ml++; if (i.pU != null) vu += i.miss * i.pU; else unk++; if (i.pN != null) vn += i.miss * i.pN; }
   }
-  return { lines: items.length, res, mp, ml, vu, vn, unk, pct: items.length ? Math.round(res / items.length * 100) : 0 };
+  const n = items.length;
+  return { lines: n, res, comp, mp, ml, vu, vn, unk, pct: n ? Math.round(res / n * 100) : 0, pctG: n ? comp / n * 100 : 0, pctR: n ? ml / n * 100 : 0 };
 }
 function progressText(rec) {
   const st = stats(rec.items);
@@ -556,7 +567,7 @@ function homeHTML() {
       <span class="grow"><span class="t">${esc(recTitle(r))}</span><br>
       ${r.label ? `<span style="font-size:14px">${esc(r.label)}</span><br>` : ""}
       <span class="sub" style="margin:0;font-size:13px">${r.sets.length > 1 ? r.sets.length + "-set lot, " : ""}${SRC_NAME[r.source || "bl"]}, ${r.items.length} elements, updated ${fmtDate(r.updated)}</span>
-      <span class="bar"><i style="width:${st.pct}%"></i></span></span>
+      <span class="bar"><i class="g" style="width:${st.pctG}%"></i><i class="r" style="width:${st.pctR}%"></i></span></span>
       <span style="text-align:right;flex:none;display:flex;flex-direction:column;gap:4px;align-items:flex-end">
         <span class="pill ${r.status === "complete" ? "done" : ""}">${r.status === "complete" ? "Finished" : st.pct + "%"}</span>
         ${st.mp ? `<span class="pill miss">${st.mp} missing</span>` : ""}
@@ -621,32 +632,34 @@ function sortSelects() {
   return h;
 }
 function invHTML(rec) {
-  const lot = rec.sets.length > 1, st = stats(rec.items);
+  const lot = rec.sets.length > 1, st = stats(rec.items), listH = listHTML(rec);
   return `
   <div class="top noprint">
     <div class="row nowrap">
       <button class="btn small" data-act="home">← Back</button>
-      <h1 class="grow ttl">${esc(recTitle(rec))}</h1>
-      ${syncChip()}
-      <button class="btn small primary" data-act="report">Report</button>
+      <div class="titlebox"><h1 class="ttl">${esc(recTitle(rec))}</h1>${syncChip()}</div>
+      <button class="btn small primary" id="reportbtn" data-act="report">Missing pieces report</button>
     </div>
     <button class="hlabel ${rec.label ? "" : "empty"}" id="hlabel" data-act="editlabel">${rec.label ? esc(rec.label) + " <span>Edit</span>" : "+ Add description"}</button>
-    <div class="bar"><i id="pbar" style="width:${st.pct}%"></i></div>
+    <div class="bar"><i class="g" id="pbarg" style="width:${st.pctG}%"></i><i class="r" id="pbarr" style="width:${st.pctR}%"></i></div>
     <div class="pstat" id="pstat">${esc(progressText(rec))}</div>
   </div>
   <div class="controls noprint">
+    <div class="row"><button class="btn small" data-act="resetfilters">Reset all filters</button></div>
     <input type="search" id="q" placeholder="Search part #, name, color, or minifig" value="${esc(ui.q)}" autocomplete="off" autocapitalize="off">
     <div class="row">
       <span class="seg"><button data-act="view" data-v="grid" class="${viewMode() === "grid" ? "on" : ""}">Grid</button><button data-act="view" data-v="list" class="${viewMode() === "list" ? "on" : ""}">List</button></span>
       ${selectHTML("status", [["all", "All elements"], ["todo", "To check"], ["missing", "Missing"], ["done", "Complete"]], prefs.status, "Show")}
+      <button class="btn small" data-act="refresh">Refresh checked status</button>
       ${selectHTML("src", [["all", "Set and minifig elements"], ["set", "Set elements only"], ["fig", "Minifig elements only"]], prefs.src, "Element source")}
+      <span class="showing" id="showing">${showingText()}</span>
       ${lot ? selectHTML("setf", [["all", "All sets in lot"], ...rec.sets.map(s => [s.num, "Set " + s.num])], ui.setf, "Set") : ""}
     </div>
     <div class="sorts" id="sorts">${sortSelects()}</div>
     <div class="row" style="gap:10px"><span style="padding-left:13px">Zoom</span>${zoomHTML()}</div>
     <div id="chipwrap">${chipsHTML(rec)}</div>
   </div>
-  <div id="list" class="${viewMode()}">${listHTML(rec)}</div>
+  <div id="list" class="${viewMode()}">${listH}</div>
   <div class="card noprint" style="margin-top:16px">
     <input type="text" id="reclabel" value="${esc(rec.label || "")}" autocomplete="off" placeholder="Description, like Purchased on eBay 11/7/26" aria-label="Description" style="margin-bottom:8px">
     <textarea id="notes" placeholder="Enter notes">${esc(rec.notes)}</textarea>
@@ -686,8 +699,13 @@ function chipsHTML(rec) {
       `<button class="chip ${ui.color === k ? "on" : ""} ${e.open ? "" : "clear"}" data-act="color" data-c="${esc(k)}"><i style="background:#${esc(e.h)}"></i>${esc(cname(e.n))}<span>${e.open || "✓"}</span></button>`).join("") + `</div>`;
   return h;
 }
+function showingText() {
+  const h = ui.shown; if (!h) return "";
+  return `Showing ${h.n} of ${h.t} element${h.t === 1 ? "" : "s"}, ${h.p} piece${h.p === 1 ? "" : "s"}`;
+}
 function listHTML(rec) {
   const a = visibleItems(rec), lot = rec.sets.length > 1;
+  ui.shown = { n: a.length, t: rec.items.length, p: a.reduce((sum, i) => sum + i.qty, 0) };
   return a.length ? a.map(i => itemHTML(i, rec)).join("") : `<p class="sub">No elements match.</p>`;
 }
 function itemHTML(it, rec) {
@@ -707,7 +725,7 @@ function itemHTML(it, rec) {
     </div>
   </div>`;
 }
-function renderList() { const rec = store.inv[ui.rec], l = $("#list"); if (rec && l) { l.className = viewMode(); l.innerHTML = listHTML(rec); } }
+function renderList() { const rec = store.inv[ui.rec], l = $("#list"); if (rec && l) { l.className = viewMode(); l.innerHTML = listHTML(rec); const sh = $("#showing"); if (sh) sh.textContent = showingText(); } }
 function renderChips() {
   const rec = store.inv[ui.rec], w = $("#chipwrap"); if (!rec || !w) return;
   const x1 = ($("#chips") || {}).scrollLeft || 0, x2 = ($("#chips2") || {}).scrollLeft || 0;
@@ -716,8 +734,9 @@ function renderChips() {
 }
 function updProgress() {
   const rec = store.inv[ui.rec]; if (!rec || ui.screen !== "inv") return;
-  const b = $("#pbar"), p = $("#pstat"); if (!b || !p) return;
-  b.style.width = stats(rec.items).pct + "%"; p.textContent = progressText(rec);
+  const g = $("#pbarg"), r = $("#pbarr"), p = $("#pstat"); if (!g || !r || !p) return;
+  const st = stats(rec.items);
+  g.style.width = st.pctG + "%"; r.style.width = st.pctR + "%"; p.textContent = progressText(rec);
 }
 function refreshItem(it) {
   if (ui.screen !== "inv") return;
@@ -789,6 +808,9 @@ document.addEventListener("click", async e => {
     case "report": ui.screen = "report"; render(); break;
     case "print": window.print(); break;
     case "view": prefs.view = el.dataset.v; savePrefs(); render(true); break;
+    case "refresh": renderChips(); renderList(); break;
+    case "resetfilters":
+      ui.q = ""; ui.fam = "all"; ui.color = "all"; ui.setf = "all"; prefs.status = "all"; prefs.src = "all"; savePrefs(); render(true); break;
     case "fam": ui.fam = el.dataset.c; renderChips(); renderList(); break;
     case "color": ui.color = el.dataset.c; renderChips(); renderList(); break;
     case "finish": rec.status = rec.status === "complete" ? "progress" : "complete"; touch(rec); render(true); toast(rec.status === "complete" ? "Inventory marked finished" : "Inventory reopened"); break;
