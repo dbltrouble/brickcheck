@@ -70,6 +70,8 @@ textarea{min-height:70px;resize:vertical}
 .bar>i{display:block;height:100%;flex:none}
 .bar>i.g{background:var(--st-ok)}
 .bar>i.r{background:var(--st-bad)}
+.chk{display:flex;align-items:center;gap:8px;font-size:14px;min-height:46px;color:var(--muted)}
+.chk input{width:20px;height:20px;margin:0;flex:none}
 .pill{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;font-weight:600;background:var(--line);color:var(--muted);white-space:nowrap}
 .pill.done{background:var(--ok-bg);color:var(--ok)}
 .pill.miss{background:var(--bad-bg);color:var(--bad)}
@@ -86,6 +88,7 @@ textarea{min-height:70px;resize:vertical}
 .controls{display:flex;flex-direction:column;gap:8px;margin-top:10px}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface)}
 .seg button{border:0;background:none;min-height:38px;padding:0 12px}
+.seg button:disabled{opacity:.5;cursor:default}
 .seg button.on{background:var(--accent);color:var(--accent-ink);font-weight:600}
 select.mini{width:auto;min-height:38px;padding:4px 12px}
 .sorts{display:flex;flex-direction:column;align-items:flex-start;gap:8px}
@@ -225,7 +228,7 @@ const write = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); retu
 const nc = (a, b) => String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: "base" });
 
 let store = read(KEY, { inv: {}, deleted: {} }); store.inv = store.inv || {}; store.deleted = store.deleted || {};
-let prefs = Object.assign({ relay: "", appKey: "", source: "rb", theme: "auto", zoom: 1, brighten: true, stickers: false, prices: true, view: "auto", status: "all", src: "all", sort: ["color", "name"] }, read(PKEY, {}));
+let prefs = Object.assign({ relay: "", appKey: "", source: "rb", theme: "auto", zoom: 1, brighten: true, stickers: false, priceSource: null, view: "auto", status: "all", src: "all", sort: ["color", "name"] }, read(PKEY, {}));
 let syncMeta = Object.assign({ since: 0, lastPush: 0 }, read(MKEY, {}));
 let colors = read(CKEY, null);
 let priceCache = read(PCKEY, {});
@@ -243,6 +246,7 @@ function darkClass(hex) {
   const L = (0.2126 * (n >> 16 & 255) + 0.7152 * (n >> 8 & 255) + 0.0722 * (n & 255)) / 255;
   return L < 0.14 ? "dk2" : L < 0.32 ? "dk1" : "";
 }
+if (prefs.priceSource == null) prefs.priceSource = prefs.prices === false ? "off" : "bo";   // carries over the older on/off setting
 const isSticker = it => /^sticker\b/i.test(it.name || "");
 const liveItems = rec => prefs.stickers ? rec.items : rec.items.filter(i => !isSticker(i));
 const SORTS = [["color", "Color"], ["name", "Name"], ["num", "Part #"], ["qty", "Quantity"], ["vu", "Used Value"], ["vn", "New Value"]];
@@ -397,10 +401,14 @@ async function fetchSetBL(num) {
   return { set: { num, name: decode(info.name), year: info.year_released || "", img, copies: 1 }, items };
 }
 
-async function startInventory(raw, label) {
+async function startInventory(raw, label, allComplete) {
   if (!relayOn()) throw new Error("Connect the relay in Settings first.");
   const source = prefs.source === "bl" ? "bl" : "rb";
   const { set, items } = await fetchSet(normSet(raw), source);
+  if (allComplete) {   // only for brand-new inventories: begin with everything Complete, then subtract what's missing
+    const t = Date.now();
+    items.forEach(i => { if (prefs.stickers || !isSticker(i)) { i.done = true; i.miss = 0; i.t = t; } });
+  }
   const id = "inv-" + Date.now().toString(36);
   store.inv[id] = { id, source, label: label.trim(), sets: [set], items, status: "progress", notes: "", notesT: 0, created: Date.now(), updated: Date.now() };
   persist(); scheduleSync();
@@ -431,7 +439,7 @@ async function priceOne(type, no, color, cond, force) {
   return v;
 }
 /* Brick Owl prices for Rebrickable inventories: Rebrickable supplies the Brick Owl IDs, Brick Owl supplies the 6-month averages. */
-const showP = rec => isBL(rec) || prefs.prices !== false;
+const showP = rec => isBL(rec) ? prefs.priceSource !== "off" : prefs.priceSource === "bo";
 let fxCache = read("brickcheck:fx", null);
 async function getFx() {
   if (fxCache && Date.now() - fxCache.t < 12 * 3600e3) return fxCache;
@@ -481,7 +489,7 @@ async function boPrice(boid, force) {
 }
 async function loadBOPrices(recId, force) {
   const rec = store.inv[recId];
-  if (!rec || isBL(rec) || prefs.prices === false || !relayOn() || ui.prices) return;
+  if (!rec || isBL(rec) || prefs.priceSource !== "bo" || !relayOn() || ui.prices) return;
   const stale = Date.now() - 14 * 864e5;
   const targets = rec.items.filter(i => i.miss > 0 && i.type === "PART" && (force || i.pT == null || i.pT < stale));
   if (!targets.length) return;
@@ -512,7 +520,7 @@ async function loadBOPrices(recId, force) {
   if (ui.screen === "report") render(true);
 }
 async function loadPrices(recId, force) {
-  if (!relayOn() || ui.prices || !store.inv[recId] || !isBL(store.inv[recId])) return;
+  if (!relayOn() || ui.prices || prefs.priceSource === "off" || !store.inv[recId] || !isBL(store.inv[recId])) return;
   const ids = store.inv[recId].items.filter(i => force || i.pT == null).map(i => i.id);
   if (!ids.length) return;
   ui.prices = { recId, done: 0, total: ids.length, err: "" }; updProgress();
@@ -722,14 +730,15 @@ const selectHTML = (id, opts, val, label) => `<select class="mini" id="${id}" ar
 function homeHTML() {
   const recs = Object.values(store.inv).sort((a, b) => b.updated - a.updated);
   return `
-  <div class="row nowrap"><h1 class="grow">BrickCheck</h1>${syncChip()}<button class="btn small" data-act="settings">Settings</button></div>
+  <div class="row nowrap"><div class="titlebox"><h1>BrickCheck</h1>${syncChip()}</div><button class="btn small" data-act="settings">Settings</button></div>
   <p class="sub">Inventory used LEGO sets against ${SRC_NAME[prefs.source]} inventories. Progress saves as you tap${relayOn() ? " and syncs across your devices" : ""}.</p>
   <div class="card">
     <div class="row">
       <input type="text" id="setnum" class="grow" style="flex:1 1 160px" autocomplete="off" autocapitalize="off" placeholder="Set number, like 9472 or 9472-1">
     </div>
     <input type="text" id="label" style="margin-top:8px" autocomplete="off" placeholder="Description (optional), like Purchased on eBay 11/7/26">
-    <div class="row" style="margin-top:8px"><button class="btn primary" data-act="add" ${ui.busy ? "disabled" : ""}>${ui.busy ? "Loading…" : "Start inventory"}</button></div>
+    <div class="row" style="margin-top:8px;gap:14px"><button class="btn primary" data-act="add" ${ui.busy ? "disabled" : ""}>${ui.busy ? "Loading…" : "Start inventory"}</button>
+      <label class="chk"><input type="checkbox" id="allcomplete" ${ui.startAll ? "checked" : ""}> Start with every element marked Complete</label></div>
     ${ui.error ? `<p class="err">${esc(ui.error)}</p>` : ""}
     ${relayOn() ? "" : `<p class="sub" style="margin:8px 0 0">First, connect the relay in <a href="#" data-act="settings">Settings</a>.</p>`}
   </div>
@@ -742,7 +751,7 @@ function homeHTML() {
       <span class="sub" style="margin:0;font-size:13px">${r.sets.length > 1 ? r.sets.length + "-set lot, " : ""}${SRC_NAME[r.source || "bl"]}, ${liveItems(r).length} elements, updated ${fmtDate(r.updated)}</span>
       <span class="bar"><i class="g" style="width:${st.pctG}%"></i><i class="r" style="width:${st.pctR}%"></i></span></span>
       <span style="text-align:right;flex:none;display:flex;flex-direction:column;gap:4px;align-items:flex-end">
-        <span class="pill ${r.status === "complete" ? "done" : ""}">${r.status === "complete" ? "Finished" : st.pct + "%"}</span>
+        <span class="pill ${r.status === "complete" ? "done" : ""}">${r.status === "complete" ? "Finished" : st.pct + "% checked"}</span>
         ${st.mp ? `<span class="pill miss">${st.mp} missing</span>` : ""}
         ${st.mp && st.vu ? `<span class="pill miss">${money(st.vu)} used</span>` : ""}
       </span>
@@ -753,27 +762,32 @@ function settingsHTML() {
   return `
   <div class="row noprint"><button class="btn small" data-act="home">← Back</button></div>
   <h1>Settings</h1>
+  <p class="sub">These settings are saved on this device only. Your inventories sync between your devices.</p>
   <h2>Appearance</h2>
   <div class="card">
     <span class="seg">${[["auto", "Match device"], ["light", "Light"], ["dark", "Dark"]].map(([v, l]) => `<button data-act="theme" data-v="${v}" class="${prefs.theme === v ? "on" : ""}">${l}</button>`).join("")}</span>
-    <p class="sub" style="margin:8px 0 0;font-size:14px">This setting is saved separately on each device.</p>
     <div class="row" style="margin-top:12px"><button class="btn small ${prefs.brighten ? "primary" : ""}" data-act="brighten">${prefs.brighten ? "✓ " : ""}Brighten dark elements</button></div>
     <p class="sub" style="margin:8px 0 0;font-size:14px">Lightens images of black, dark brown, and other dark elements so details are easier to see.</p>
   </div>
-  <h2>Data source</h2>
+  <h2>Inventory source</h2>
   <div class="card">
     <span class="seg">${[["rb", "Rebrickable"], ["bl", "BrickLink"]].map(([v, l]) => `<button data-act="source" data-v="${v}" class="${prefs.source === v ? "on" : ""}">${l}</button>`).join("")}</span>
-    <p class="sub" style="margin:8px 0 0;font-size:14px">Applies to new inventories. Each inventory keeps the source it started with. Element values are only available from BrickLink.</p>
+    <p class="sub" style="margin:8px 0 0;font-size:14px">Where the element list for a new inventory comes from. Each inventory keeps the source it started with.</p>
   </div>
   <h2>Prices</h2>
   <div class="card">
-    <div class="row"><button class="btn small ${prefs.prices !== false ? "primary" : ""}" data-act="prices">${prefs.prices !== false ? "✓ " : ""}Show Brick Owl prices</button></div>
-    <p class="sub" style="margin:8px 0 0;font-size:14px">Adds replacement prices to the Missing pieces report for Rebrickable inventories: Brick Owl’s 6-month average for new and used, converted to dollars. Brick Owl doesn’t say whether the averages come from sales or listings. Needs your Brick Owl key (BO_KEY) set up on the relay.</p>
+    <span class="seg">
+      <button data-act="pricesrc" data-v="bo" class="${prefs.priceSource === "bo" ? "on" : ""}">Brick Owl</button>
+      <button disabled title="Coming later">BrickLink (later)</button>
+      <button data-act="pricesrc" data-v="off" class="${prefs.priceSource === "off" ? "on" : ""}">Off</button>
+    </span>
+    <p class="sub" style="margin:8px 0 0;font-size:14px">Adds replacement prices to the Missing pieces report: the 6-month average for new and used elements, converted to dollars. Brick Owl doesn’t say whether its averages come from sales or listings. Brick Owl prices need your Brick Owl key (BO_KEY) set up on the relay.</p>
+    <p class="sub" style="margin:8px 0 0;font-size:14px">BrickLink prices for Rebrickable inventories are coming later. Inventories that start from BrickLink show BrickLink’s own prices, unless Prices is Off.</p>
   </div>
   <h2>Sticker sheets</h2>
   <div class="card">
     <div class="row"><button class="btn small ${prefs.stickers ? "primary" : ""}" data-act="stickers">${prefs.stickers ? "✓ " : ""}Include sticker sheets in inventories</button></div>
-    <p class="sub" style="margin:8px 0 0;font-size:14px">When off, sticker sheets are hidden everywhere: element lists, counts, progress, and reports. Nothing is deleted, so turning this back on brings them back with any marks you made. This setting is saved separately on each device.</p>
+    <p class="sub" style="margin:8px 0 0;font-size:14px">When off, sticker sheets are hidden everywhere: element lists, counts, progress, and reports. Nothing is deleted, so turning this back on brings them back with any marks you made.</p>
   </div>
   <h2>Relay</h2>
   <div class="card">
@@ -894,7 +908,7 @@ function listHTML(rec) {
 }
 function itemHTML(it, rec) {
   const ok = it.done, bad = it.miss > 0, lot = rec.sets.length > 1;
-  const px = !isBL(rec) ? "" : it.pT == null ? (ui.prices ? "Loading prices…" : "No prices yet") : `New ${money(it.pN)}, used ${money(it.pU)}`;
+  const px = !isBL(rec) || prefs.priceSource === "off" ? "" : it.pT == null ? (ui.prices ? "Loading prices…" : "No prices yet") : `New ${money(it.pN)}, used ${money(it.pU)}`;
   return `<div class="item ${ok ? "st-ok" : ""} ${bad ? "st-bad" : ""}" data-id="${esc(it.id)}">
     <div class="pic"><img loading="lazy" class="${darkClass(it.hex)}" src="${esc(it.img || imgURL(it.type, it.no, it.colorId))}" alt="" onerror="this.style.visibility='hidden'"></div>
     <div class="meta"><span class="qline"><span class="qty">${it.qty}×</span><b>${esc(it.no)}</b></span><span class="nm">${esc(it.name)}</span>
@@ -993,7 +1007,7 @@ document.addEventListener("click", async e => {
       const v = $("#setnum").value, lb = $("#label").value; if (!v.trim() || ui.busy) return;
       const restore = () => { $("#setnum").value = v; $("#label").value = lb; };
       ui.busy = true; ui.error = ""; render(); restore();
-      try { const id = await startInventory(v, lb); ui.busy = false; openRec(id); loadPrices(id); }
+      try { const id = await startInventory(v, lb, !!ui.startAll); ui.busy = false; ui.startAll = false; openRec(id); loadPrices(id); }
       catch (err) { ui.busy = false; ui.error = err.message; render(); restore(); }
       break;
     }
@@ -1004,7 +1018,7 @@ document.addEventListener("click", async e => {
     case "report": ui.screen = "report"; render(); loadBOPrices(rec.id); break;
     case "print": window.print(); break;
     case "view": prefs.view = el.dataset.v; savePrefs(); render(true); break;
-    case "prices": prefs.prices = prefs.prices === false; savePrefs(); render(true); break;
+    case "pricesrc": prefs.priceSource = el.dataset.v; savePrefs(); render(true); break;
     case "stickers": prefs.stickers = !prefs.stickers; savePrefs(); render(true); break;
     case "refresh": renderChips(); renderList(); break;
     case "resetfilters":
@@ -1012,7 +1026,7 @@ document.addEventListener("click", async e => {
     case "fam": ui.fam = el.dataset.c; renderChips(); renderList(); break;
     case "color": ui.color = el.dataset.c; renderChips(); renderList(); break;
     case "finish": rec.status = rec.status === "complete" ? "progress" : "complete"; touch(rec); render(true); toast(rec.status === "complete" ? "Inventory marked finished" : "Inventory reopened"); break;
-    case "reprice": if (!relayOn()) toast("Connect the relay in Settings first."); else if (ui.prices) toast("Prices are already loading."); else if (isBL(rec)) loadPrices(rec.id, true); else if (prefs.prices === false) toast("Prices are turned off in Settings."); else { loadBOPrices(rec.id, true); toast("Refreshing prices for missing elements"); } break;
+    case "reprice": if (!relayOn()) toast("Connect the relay in Settings first."); else if (ui.prices) toast("Prices are already loading."); else if (isBL(rec)) loadPrices(rec.id, true); else if (prefs.priceSource !== "bo") toast("Prices are turned off in Settings."); else { loadBOPrices(rec.id, true); toast("Refreshing prices for missing elements"); } break;
     case "reset": if (confirm("Clear every Complete and Missing mark for this inventory?")) { const t = Date.now(); rec.items.forEach(i => { i.done = false; i.miss = 0; i.t = t; }); rec.status = "progress"; touch(rec); render(true); } break;
     case "editlabel": {
       const v = prompt("Description for this inventory (for example, Purchased on eBay 11/7/26):", rec.label || "");
@@ -1091,7 +1105,8 @@ function openRec(id) { ui.rec = id; ui.screen = "inv"; ui.q = ""; ui.fam = "all"
 
 document.addEventListener("change", e => {
   const t = e.target;
-  if (t.id === "status" || t.id === "src") { prefs[t.id] = t.value; savePrefs(); renderChips(); renderList(); }
+  if (t.id === "allcomplete") { ui.startAll = t.checked; }
+  else if (t.id === "status" || t.id === "src") { prefs[t.id] = t.value; savePrefs(); renderChips(); renderList(); }
   else if (t.id === "setf") { ui.setf = t.value; renderChips(); renderList(); }
   else if (/^sort\d$/.test(t.id)) {
     const i = +t.id.slice(4);
