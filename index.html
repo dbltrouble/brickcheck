@@ -225,7 +225,7 @@ const write = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); retu
 const nc = (a, b) => String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: "base" });
 
 let store = read(KEY, { inv: {}, deleted: {} }); store.inv = store.inv || {}; store.deleted = store.deleted || {};
-let prefs = Object.assign({ relay: "", appKey: "", source: "rb", theme: "auto", zoom: 1, brighten: true, stickers: false, view: "auto", status: "all", src: "all", sort: ["color", "name"] }, read(PKEY, {}));
+let prefs = Object.assign({ relay: "", appKey: "", source: "rb", theme: "auto", zoom: 1, brighten: true, stickers: false, prices: true, view: "auto", status: "all", src: "all", sort: ["color", "name"] }, read(PKEY, {}));
 let syncMeta = Object.assign({ since: 0, lastPush: 0 }, read(MKEY, {}));
 let colors = read(CKEY, null);
 let priceCache = read(PCKEY, {});
@@ -430,6 +430,87 @@ async function priceOne(type, no, color, cond, force) {
   priceCache[k] = { v, t: Date.now() };
   return v;
 }
+/* Brick Owl prices for Rebrickable inventories: Rebrickable supplies the Brick Owl IDs, Brick Owl supplies the 6-month averages. */
+const showP = rec => isBL(rec) || prefs.prices !== false;
+let fxCache = read("brickcheck:fx", null);
+async function getFx() {
+  if (fxCache && Date.now() - fxCache.t < 12 * 3600e3) return fxCache;
+  try {
+    const d = await relay("/fx");
+    if (d && d.rate) { fxCache = { rate: d.rate, date: d.date, approx: !!d.approx, t: Date.now() }; write("brickcheck:fx", fxCache); return fxCache; }
+  } catch (e) {}
+  return fxCache || { rate: 1.34, approx: true, t: Date.now() };
+}
+let rbColorBO = read("brickcheck:rbcolors", null);
+async function ensureRBColors() {
+  if (rbColorBO && rbColorBO.t > Date.now() - 30 * 864e5) return rbColorBO.m;
+  const list = await rbAll("colors/?page_size=1000");
+  const m = {};
+  list.forEach(c => { const e = c.external_ids && c.external_ids.BrickOwl; if (e && e.ext_ids && e.ext_ids.length) m[c.id] = e.ext_ids[0]; });
+  rbColorBO = { t: Date.now(), m }; write("brickcheck:rbcolors", rbColorBO);
+  return m;
+}
+async function resolveBO(items) {   // sets it.bb (Brick Owl part ID) and it.bc (Brick Owl color number); "" means unknown
+  const cm = await ensureRBColors();
+  const need = [...new Set(items.filter(i => i.type === "PART" && i.bb == null).map(i => i.no))], base = {};
+  for (let k = 0; k < need.length; k += 40) {
+    const chunk = need.slice(k, k + 40);
+    const res = await rbAll(`parts/?part_nums=${chunk.map(encodeURIComponent).join(",")}&inc_part_details=1&page_size=1000`);
+    res.forEach(p => { const b = p.external_ids && p.external_ids.BrickOwl; if (b && b.length) base[p.part_num] = String(b[0]); });
+  }
+  for (const it of items) {
+    if (it.type !== "PART") continue;
+    if (it.bb == null) it.bb = base[it.no] || "";
+    if (it.bc == null) it.bc = cm[it.colorId] != null ? cm[it.colorId] : "";
+  }
+}
+async function boBaseFallback(no) {
+  const d = await relay("/bo/catalog/id_lookup?id=" + encodeURIComponent(no) + "&type=Part&id_type=design_id");
+  const b = d && d.boids && d.boids[0];
+  return b ? String(b).split("-")[0] : "";
+}
+async function boPrice(boid, force) {
+  const k = "bo|" + boid, c = priceCache[k];
+  if (!force && c && c.t > Date.now() - 14 * 864e5) return c;
+  const d = await relay("/bo/catalog/price_history?boid=" + encodeURIComponent(boid));
+  if (d.error) throw new Error(typeof d.error === "string" ? d.error : "Brick Owl error");
+  const num = x => { const v = parseFloat(x); return v > 0 ? v : null; };
+  const out = { n: num(d["6months_average_new"]), u: num(d["6months_average_used"]), t: Date.now() };
+  priceCache[k] = out;
+  return out;
+}
+async function loadBOPrices(recId, force) {
+  const rec = store.inv[recId];
+  if (!rec || isBL(rec) || prefs.prices === false || !relayOn() || ui.prices) return;
+  const stale = Date.now() - 14 * 864e5;
+  const targets = rec.items.filter(i => i.miss > 0 && i.type === "PART" && (force || i.pT == null || i.pT < stale));
+  if (!targets.length) return;
+  ui.prices = { recId, done: 0, total: targets.length, err: "" }; updProgress();
+  try {
+    await resolveBO(targets);
+    for (const it of targets) if (it.bb === "") { try { it.bb = await boBaseFallback(it.no); } catch (e) {} }
+    const fx = (await getFx()).rate;
+    let next = 0;
+    const worker = async () => {
+      while (next < targets.length && !ui.prices.err) {
+        const it = targets[next++];
+        try {
+          if (it.bb && it.bc !== "" && it.bc != null) {
+            const p = await boPrice(`${it.bb}-${it.bc}`, force);
+            it.pN = p.n != null ? p.n * fx : null; it.pU = p.u != null ? p.u * fx : null;
+          } else { it.pN = null; it.pU = null; }
+          it.pT = Date.now();
+        } catch (e) { ui.prices.err = e.message; }
+        ui.prices.done++; updProgress();
+      }
+    };
+    await Promise.all([worker(), worker(), worker()]);
+  } catch (e) { if (ui.prices) ui.prices.err = e.message; }
+  const err = ui.prices ? ui.prices.err : ""; ui.prices = null; write(PCKEY, priceCache);
+  rec.updated = Date.now(); persist(); scheduleSync(); updProgress();
+  if (err) toast("Prices stopped: " + err);
+  if (ui.screen === "report") render(true);
+}
 async function loadPrices(recId, force) {
   if (!relayOn() || ui.prices || !store.inv[recId] || !isBL(store.inv[recId])) return;
   const ids = store.inv[recId].items.filter(i => force || i.pT == null).map(i => i.id);
@@ -569,6 +650,50 @@ function sortItems(a) {
     return 0;
   });
 }
+/* Search: space = AND; OR, NOT, ( ), "exact phrase", and -word (same as NOT word). Operators work in any case. */
+function compileSearch(q) {
+  const toks = (q.match(/"[^"]*"?|\(|\)|[^\s()"]+/g) || []).map(t => {
+    if (t === "(" || t === ")") return { k: t };
+    if (t[0] === '"') return { k: "t", v: t.replace(/^"|"$/g, "").toLowerCase() };
+    const u = t.toUpperCase();
+    if (u === "AND" || t === "&&" || t === "&") return { k: "AND" };
+    if (u === "OR" || t === "||" || t === "|") return { k: "OR" };
+    if (u === "NOT" || t === "!") return { k: "NOT" };
+    if (t.length > 1 && t[0] === "-") return { k: "NOTT", v: t.slice(1).toLowerCase() };
+    return { k: "t", v: t.toLowerCase() };
+  }).filter(t => t.k !== "t" || t.v);
+  let pos = 0;
+  const peek = () => toks[pos];
+  const parseOr = () => {
+    let l = parseAnd();
+    while (peek() && peek().k === "OR") {
+      pos++; if (!peek() || peek().k === ")") break;   // a dangling OR (still typing) is ignored
+      const a = l, r = parseAnd(); l = h => a(h) || r(h);
+    }
+    return l;
+  };
+  const parseAnd = () => {
+    let l = parseNot();
+    while (peek() && peek().k !== "OR" && peek().k !== ")") {
+      if (peek().k === "AND") pos++;
+      const a = l, r = parseNot(); l = h => a(h) && r(h);
+    }
+    return l;
+  };
+  const parseNot = () => {
+    const t = peek(); if (!t) return () => true;
+    if (t.k === "NOT") { pos++; if (!peek() || peek().k === ")") return () => true; const x = parseNot(); return h => !x(h); }
+    return primary();
+  };
+  const primary = () => {
+    const t = toks[pos++]; if (!t) return () => true;
+    if (t.k === "(") { const e = parseOr(); if (peek() && peek().k === ")") pos++; return e; }
+    if (t.k === "NOTT") return h => !h.includes(t.v);
+    if (t.k === "t") return h => h.includes(t.v);
+    return () => true;
+  };
+  return parseOr();
+}
 function visibleItems(rec) {
   let a = baseItems(rec);
   if (ui.fam !== "all") a = a.filter(i => famsOf(i.colorName).includes(ui.fam));
@@ -577,8 +702,8 @@ function visibleItems(rec) {
   if (st === "todo") a = a.filter(i => !i.done && !i.miss);
   else if (st === "missing") a = a.filter(i => i.miss > 0);
   else if (st === "done") a = a.filter(i => i.done);
-  const q = ui.q.trim().toLowerCase();
-  if (q) a = a.filter(i => (i.no + " " + i.name + " " + i.colorName + " " + i.fig).toLowerCase().includes(q));
+  const q = ui.q.trim();
+  if (q) { const f = compileSearch(q); a = a.filter(i => f((i.no + " " + i.name + " " + cname(i.colorName) + " " + i.colorName + " " + i.fig).toLowerCase())); }
   return sortItems(a.slice());
 }
 
@@ -640,6 +765,11 @@ function settingsHTML() {
     <span class="seg">${[["rb", "Rebrickable"], ["bl", "BrickLink"]].map(([v, l]) => `<button data-act="source" data-v="${v}" class="${prefs.source === v ? "on" : ""}">${l}</button>`).join("")}</span>
     <p class="sub" style="margin:8px 0 0;font-size:14px">Applies to new inventories. Each inventory keeps the source it started with. Element values are only available from BrickLink.</p>
   </div>
+  <h2>Prices</h2>
+  <div class="card">
+    <div class="row"><button class="btn small ${prefs.prices !== false ? "primary" : ""}" data-act="prices">${prefs.prices !== false ? "✓ " : ""}Show Brick Owl prices</button></div>
+    <p class="sub" style="margin:8px 0 0;font-size:14px">Adds replacement prices to the Missing pieces report for Rebrickable inventories: Brick Owl’s 6-month average for new and used, converted to dollars. Brick Owl doesn’t say whether the averages come from sales or listings. Needs your Brick Owl key (BO_KEY) set up on the relay.</p>
+  </div>
   <h2>Sticker sheets</h2>
   <div class="card">
     <div class="row"><button class="btn small ${prefs.stickers ? "primary" : ""}" data-act="stickers">${prefs.stickers ? "✓ " : ""}Include sticker sheets in inventories</button></div>
@@ -666,7 +796,7 @@ function settingsHTML() {
 }
 
 function sortSelects() {
-  const bl = !store.inv[ui.rec] || isBL(store.inv[ui.rec]);
+  const bl = !store.inv[ui.rec] || showP(store.inv[ui.rec]);
   const sel = (i, allowNone) => {
     const used = prefs.sort.slice(0, i).map(v => v.split(":")[0]);
     const opts = [];
@@ -698,11 +828,10 @@ function invHTML(rec) {
     <div class="pstat" id="pstat">${esc(progressText(rec))}</div>
   </div>
   <div class="controls noprint">
-    <div class="row"><button class="btn small" data-act="resetfilters">Reset all filters</button></div>
-    <input type="search" id="q" placeholder="Search part #, name, color, or minifig" value="${esc(ui.q)}" autocomplete="off" autocapitalize="off">
+    <div class="row"><button class="btn small primary" data-act="resetfilters">Reset all filters</button><button class="btn small primary" data-act="refresh">Refresh checked status</button></div>
+    <input type="search" id="q" placeholder="Search part #, name, color, minifig (AND, OR, NOT)" value="${esc(ui.q)}" autocomplete="off" autocapitalize="off">
     <div class="row">
       ${selectHTML("status", [["all", "All elements"], ["todo", "To check"], ["missing", "Missing"], ["done", "Complete"]], prefs.status, "Show")}
-      <button class="btn small primary" data-act="refresh">Refresh checked status</button>
       ${selectHTML("src", [["all", "Set and minifig elements"], ["set", "Set elements only"], ["fig", "Minifig elements only"]], prefs.src, "Element source")}
       <span class="showing" id="showing">${showingText()}</span>
       ${lot ? selectHTML("setf", [["all", "All sets in lot"], ...rec.sets.map(s => [s.num, "Set " + s.num])], ui.setf, "Set") : ""}
@@ -788,7 +917,9 @@ function renderChips() {
   if ($("#chips")) $("#chips").scrollLeft = x1; if ($("#chips2")) $("#chips2").scrollLeft = x2;
 }
 function updProgress() {
-  const rec = store.inv[ui.rec]; if (!rec || ui.screen !== "inv") return;
+  const rec = store.inv[ui.rec];
+  if (rec && ui.screen === "report") { const e = $("#rprog"); if (e) e.textContent = ui.prices && ui.prices.recId === rec.id ? `Loading prices… ${ui.prices.done} of ${ui.prices.total}` : ""; return; }
+  if (!rec || ui.screen !== "inv") return;
   const g = $("#pbarg"), r = $("#pbarr"), p = $("#pstat"); if (!g || !r || !p) return;
   const st = stats(liveItems(rec));
   g.style.width = st.pctG + "%"; r.style.width = st.pctR + "%"; p.textContent = progressText(rec);
@@ -820,9 +951,11 @@ function reportHTML(rec) {
     ${tile(st.mp, "piece" + (st.mp === 1 ? "" : "s") + " missing", "bad")}
     ${tile(st.ml, "element" + (st.ml === 1 ? "" : "s") + " affected")}
     ${unchecked ? tile(unchecked, "element" + (unchecked === 1 ? "" : "s") + " not yet checked") : ""}
-    ${st.mp && isBL(rec) ? tile(money(st.vu), "to replace, used") + tile(money(st.vn), "to replace, new") : ""}
+    ${st.mp && showP(rec) ? tile(money(st.vu), "to replace, used") + tile(money(st.vn), "to replace, new") : ""}
   </div>
-  ${st.mp && isBL(rec) && st.unk ? `<p class="sub" style="margin-top:0">${st.unk} element${st.unk === 1 ? "" : "s"} without price data.</p>` : ""}
+  <p class="sub" id="rprog" style="margin-top:0">${ui.prices && ui.prices.recId === rec.id ? `Loading prices… ${ui.prices.done} of ${ui.prices.total}` : ""}</p>
+  ${st.mp && showP(rec) && st.unk ? `<p class="sub" style="margin-top:0">${st.unk} element${st.unk === 1 ? "" : "s"} without price data.</p>` : ""}
+  ${st.mp && showP(rec) && !isBL(rec) ? `<p class="sub" style="margin-top:0">Prices: 6-month averages from <a href="https://www.brickowl.com" target="_blank" rel="noopener">Brick Owl</a>, converted from pounds at about $${(fxCache ? fxCache.rate : 1.34).toFixed(2)} per £1${fxCache && fxCache.approx ? " (approximate rate)" : ""}.</p>` : ""}
   ${rec.notes ? `<p>${esc(rec.notes).replace(/\n/g, "<br>")}</p>` : ""}
   ${miss.length ? `<div class="rlist">${miss.map(i => `
     <div class="rrow">
@@ -833,7 +966,7 @@ function reportHTML(rec) {
         <div class="rname">${esc(i.name)}</div>
         ${i.fig ? `<div class="rsub">Minifig: ${esc(i.fig)}</div>` : ""}
         ${lot ? `<div class="rsub">Set ${esc(i.src)}</div>` : ""}
-        ${isBL(rec) ? `<div class="rsub">Used ${money(i.pU)} each · New ${money(i.pN)} each</div>` : ""}
+        ${showP(rec) ? `<div class="rsub">${i.pT == null ? (ui.prices ? "Loading prices…" : "No price yet") : `Used ${money(i.pU)} each · New ${money(i.pN)} each`}</div>` : ""}
       </div>
       <div class="rmiss"><span class="rbadge">${i.miss}</span><span class="rof">of ${i.qty}</span></div>
     </div>`).join("")}</div>` : `<p class="sub">Nothing marked missing.</p>`}`;
@@ -868,9 +1001,10 @@ document.addEventListener("click", async e => {
     case "home": ui.screen = "home"; ui.error = ""; ui.setMsg = ""; render(); break;
     case "settings": ui.screen = "settings"; render(); break;
     case "back": ui.screen = "inv"; render(); break;
-    case "report": ui.screen = "report"; render(); break;
+    case "report": ui.screen = "report"; render(); loadBOPrices(rec.id); break;
     case "print": window.print(); break;
     case "view": prefs.view = el.dataset.v; savePrefs(); render(true); break;
+    case "prices": prefs.prices = prefs.prices === false; savePrefs(); render(true); break;
     case "stickers": prefs.stickers = !prefs.stickers; savePrefs(); render(true); break;
     case "refresh": renderChips(); renderList(); break;
     case "resetfilters":
@@ -878,7 +1012,7 @@ document.addEventListener("click", async e => {
     case "fam": ui.fam = el.dataset.c; renderChips(); renderList(); break;
     case "color": ui.color = el.dataset.c; renderChips(); renderList(); break;
     case "finish": rec.status = rec.status === "complete" ? "progress" : "complete"; touch(rec); render(true); toast(rec.status === "complete" ? "Inventory marked finished" : "Inventory reopened"); break;
-    case "reprice": if (!relayOn()) toast("Connect the relay in Settings first."); else if (ui.prices) toast("Prices are already loading."); else loadPrices(rec.id, true); break;
+    case "reprice": if (!relayOn()) toast("Connect the relay in Settings first."); else if (ui.prices) toast("Prices are already loading."); else if (isBL(rec)) loadPrices(rec.id, true); else if (prefs.prices === false) toast("Prices are turned off in Settings."); else { loadBOPrices(rec.id, true); toast("Refreshing prices for missing elements"); } break;
     case "reset": if (confirm("Clear every Complete and Missing mark for this inventory?")) { const t = Date.now(); rec.items.forEach(i => { i.done = false; i.miss = 0; i.t = t; }); rec.status = "progress"; touch(rec); render(true); } break;
     case "editlabel": {
       const v = prompt("Description for this inventory (for example, Purchased on eBay 11/7/26):", rec.label || "");
@@ -916,7 +1050,7 @@ document.addEventListener("click", async e => {
           if (!d.rebrickable) throw new Error("The relay doesn’t have a Rebrickable key yet. Add the RB_KEY secret on Cloudflare.");
           await rb("colors/?page_size=1");
         }
-        ui.setMsg = "Connected to " + SRC_NAME[prefs.source] + ". Sync is on.";
+        ui.setMsg = "Connected to " + SRC_NAME[prefs.source] + ". Sync is on. " + (d.brickowl ? "Brick Owl prices are available." : "Brick Owl prices aren’t set up on the relay yet.");
         fullNext = true; doSync();
       } catch (err) { ui.setMsg = err.message; }
       ui.busy = false; render(true); break;
@@ -986,6 +1120,14 @@ document.addEventListener("input", e => {
   else if (e.target.id === "reclabel") { const rec = store.inv[ui.rec]; rec.label = e.target.value; const h = $("#hlabel"); if (h) { h.className = "hlabel" + (rec.label ? "" : " empty"); h.innerHTML = rec.label ? esc(rec.label) + " <span>Edit</span>" : "+ Add description"; } clearTimeout(noteTimer); noteTimer = setTimeout(() => touch(rec), 500); }
   else if (e.target.id === "notes") { const rec = store.inv[ui.rec]; rec.notes = e.target.value; rec.notesT = Date.now(); clearTimeout(noteTimer); noteTimer = setTimeout(() => touch(rec), 500); }
 });
+let qFocus = false;
+document.addEventListener("focusin", e => {
+  if (e.target.id !== "q") return;
+  qFocus = true; const el = e.target;
+  setTimeout(() => { el.select(); el.setSelectionRange(0, el.value.length); }, 0);
+  setTimeout(() => { qFocus = false; }, 300);
+});
+document.addEventListener("mouseup", e => { if (e.target.id === "q" && qFocus) e.preventDefault(); });
 document.addEventListener("keydown", e => {
   if (e.key !== "Enter") return;
   if (e.target.id === "setnum" || e.target.id === "label") $('[data-act="add"]').click();
